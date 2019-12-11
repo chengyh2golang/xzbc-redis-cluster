@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.redhat.io/ubi8/ubi-minimal:latest
 
 ENV OPERATOR=/usr/local/bin/xzbc-temp \
     USER_UID=1001 \
@@ -8,7 +8,7 @@ ENV OPERATOR=/usr/local/bin/xzbc-temp \
 COPY build/_output/bin/xzbc-temp ${OPERATOR}
 
 COPY build/bin /usr/local/bin
-RUN  /usr/local/bin/user_setup
+RUN  chmod +x /usr/local/bin/user_setup && /usr/local/bin/user_setup
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 

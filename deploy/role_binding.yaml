@@ -1,11 +1,11 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: xzbc-temp
+  name: xzbc-redis-cluster
 subjects:
 - kind: ServiceAccount
-  name: xzbc-temp
+  name: xzbc-redis-cluster
 roleRef:
   kind: Role
-  name: xzbc-temp
+  name: xzbc-redis-cluster
   apiGroup: rbac.authorization.k8s.io

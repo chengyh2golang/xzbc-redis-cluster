@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: xzbc-temp
+  name: xzbc-redis-cluster
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: xzbc-temp
+      name: xzbc-redis-cluster
   template:
     metadata:
       labels:
-        name: xzbc-temp
+        name: xzbc-redis-cluster
     spec:
-      serviceAccountName: xzbc-temp
+      serviceAccountName: xzbc-redis-cluster
       containers:
-        - name: xzbc-temp
+        - name: xzbc-redis-cluster
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
-          - xzbc-temp
+          - xzbc-redis-cluster
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -30,4 +30,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "xzbc-temp"
+              value: "xzbc-redis-cluster"

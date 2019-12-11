@@ -11,8 +11,8 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
-	"xzbc-temp/pkg/apis"
-	"xzbc-temp/pkg/controller"
+	"xzbc-redis-cluster/pkg/apis"
+	"xzbc-redis-cluster/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -82,7 +82,7 @@ func main() {
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "xzbc-temp-lock")
+	err = leader.Become(ctx, "xzbc-redis-cluster-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

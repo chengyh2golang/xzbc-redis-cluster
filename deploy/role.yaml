@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: xzbc-temp
+  name: xzbc-xzbc-redis-cluster
 rules:
 - apiGroups:
   - ""
@@ -36,7 +36,7 @@ rules:
 - apiGroups:
   - apps
   resourceNames:
-  - xzbc-temp
+  - xzbc-xzbc-redis-cluster
   resources:
   - deployments/finalizers
   verbs:

@@ -1,4 +1,4 @@
-module xzbc-temp
+module xzbc-redis-cluster
 
 require (
 	github.com/operator-framework/operator-sdk v0.0.0-20191210214720-cea92d5be4cf

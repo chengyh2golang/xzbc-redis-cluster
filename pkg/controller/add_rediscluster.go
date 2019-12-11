@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"xzbc-temp/pkg/controller/rediscluster"
+	"xzbc-redis-cluster/pkg/controller/rediscluster"
 )
 
 func init() {
