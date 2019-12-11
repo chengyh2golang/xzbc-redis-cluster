@@ -117,7 +117,7 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 					{
 						ObjectMeta:metav1.ObjectMeta{
 							Name:"redis-data",
-							
+
 						},
 						Spec:corev1.PersistentVolumeClaimSpec{
 							AccessModes:[]corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},

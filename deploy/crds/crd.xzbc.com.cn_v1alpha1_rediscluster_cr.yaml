@@ -7,3 +7,4 @@ spec:
   replicas: 6
   image: redis
   redistribimage: redis-trib:1.0
+  storage: 10
