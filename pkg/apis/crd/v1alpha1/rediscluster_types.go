@@ -19,6 +19,7 @@ type RedisClusterSpec struct {
 	Image string `json:"image"`
 	ClusterMode bool `json:"clustermode"`
 	Storage string `json:"storage"`
+	StorageClassName string `json:"storageClassName"`
 	Resources corev1.ResourceRequirements `json:"resources"`
 	RedisTribImage string `json:"redistribimage"`
 }

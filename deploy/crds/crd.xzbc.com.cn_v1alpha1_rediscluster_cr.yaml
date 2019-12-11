@@ -8,3 +8,4 @@ spec:
   image: redis
   redistribimage: redis-trib:1.0
   storage: 1Gi
+  storageClassName: nfs

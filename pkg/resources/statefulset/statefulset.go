@@ -120,12 +120,13 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 						},
 						Spec:corev1.PersistentVolumeClaimSpec{
 							AccessModes:[]corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+							StorageClassName:&redisCluster.Spec.StorageClassName,
 							Resources:corev1.ResourceRequirements{
 								Requests:corev1.ResourceList{
 									corev1.ResourceStorage:resource.MustParse(
 										//fmt.Sprintf("%vGi",redisCluster.Spec.Storage)),
 									redisCluster.Spec.Storage),
-										
+
 								},
 							},
 						},
