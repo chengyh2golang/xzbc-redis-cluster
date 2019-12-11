@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: xzbc-redis-cluster
+  name: xzbc-redis-cluster-operator
 spec:
   replicas: 1
   selector:
@@ -19,7 +19,7 @@ spec:
           image: redis-operator-xzbc:1.0
           command:
           - xzbc-redis-cluster
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
