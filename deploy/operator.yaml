@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xzbc-temp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: xzbc-temp
+  template:
+    metadata:
+      labels:
+        name: xzbc-temp
+    spec:
+      serviceAccountName: xzbc-temp
+      containers:
+        - name: xzbc-temp
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - xzbc-temp
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "xzbc-temp"
