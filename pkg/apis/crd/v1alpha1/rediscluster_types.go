@@ -18,7 +18,7 @@ type RedisClusterSpec struct {
 	Replicas *int32 `json:"replicas"`
 	Image string `json:"image"`
 	ClusterMode bool `json:"clustermode"`
-	Storage int32 `json:"storage"`
+	Storage string `json:"storage"`
 	Resources corev1.ResourceRequirements `json:"resources"`
 	RedisTribImage string `json:"redistribimage"`
 }

@@ -1,13 +1,12 @@
 package statefulset
 
 import (
-	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	corev1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
 const (
@@ -124,7 +123,9 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 							Resources:corev1.ResourceRequirements{
 								Requests:corev1.ResourceList{
 									corev1.ResourceStorage:resource.MustParse(
-										fmt.Sprintf("%vGi",redisCluster.Spec.Storage)),
+										//fmt.Sprintf("%vGi",redisCluster.Spec.Storage)),
+									redisCluster.Spec.Storage),
+										
 								},
 							},
 						},
