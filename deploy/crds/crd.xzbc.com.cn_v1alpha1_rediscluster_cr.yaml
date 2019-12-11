@@ -1,7 +1,9 @@
 apiVersion: crd.xzbc.com.cn/v1alpha1
 kind: RedisCluster
 metadata:
-  name: example-rediscluster
+  name: rediscluster01
 spec:
   # Add fields here
-  size: 3
+  replicas: 6
+  image: redis
+  redistribimage: redis-trib:1.0
