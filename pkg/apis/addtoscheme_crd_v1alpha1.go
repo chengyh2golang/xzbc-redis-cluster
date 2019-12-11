@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"xzbc-temp/pkg/apis/crd/v1alpha1"
+	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
 func init() {

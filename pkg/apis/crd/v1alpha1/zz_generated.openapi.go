@@ -11,9 +11,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"xzbc-temp/pkg/apis/crd/v1alpha1.RedisCluster":       schema_pkg_apis_crd_v1alpha1_RedisCluster(ref),
-		"xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterSpec":   schema_pkg_apis_crd_v1alpha1_RedisClusterSpec(ref),
-		"xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterStatus": schema_pkg_apis_crd_v1alpha1_RedisClusterStatus(ref),
+		"xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisCluster":       schema_pkg_apis_crd_v1alpha1_RedisCluster(ref),
+		"xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterSpec":   schema_pkg_apis_crd_v1alpha1_RedisClusterSpec(ref),
+		"xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterStatus": schema_pkg_apis_crd_v1alpha1_RedisClusterStatus(ref),
 	}
 }
 
@@ -45,19 +45,19 @@ func schema_pkg_apis_crd_v1alpha1_RedisCluster(ref common.ReferenceCallback) com
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterSpec"),
+							Ref: ref("xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterStatus"),
+							Ref: ref("xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterSpec", "xzbc-temp/pkg/apis/crd/v1alpha1.RedisClusterStatus"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterSpec", "xzbc-redis-cluster/pkg/apis/crd/v1alpha1.RedisClusterStatus"},
 	}
 }
 
