@@ -65,7 +65,7 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "redis-conf", MountPath: "/etc/redis"},
-								{Name: "redis-data", MountPath: "/var/lib/redis"},
+								{Name: "redis-data", MountPath: "/data"},
 							},
 							Command: []string{
 								"redis-server",
