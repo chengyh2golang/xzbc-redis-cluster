@@ -1,6 +1,8 @@
 package statefulset
 
 import (
+	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1 "k8s.io/api/core/v1"
@@ -72,11 +74,6 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								"--protected-mode no",
 							},
 							/*
-								Args: []string{
-									"/etc/redis/redis.conf",
-									"--protected-mode",
-									"no",
-								},
 								Lifecycle:&corev1.Lifecycle{
 									PreStop:&corev1.Handler{
 										Exec:&corev1.ExecAction{
@@ -88,12 +85,15 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 						},
 					},
 					Volumes: []corev1.Volume{
+						/*
 						{
+
 							Name: "redis-data",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
+						*/
 						{
 							Name: "redis-conf",
 							VolumeSource: corev1.VolumeSource{
@@ -110,24 +110,26 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 					},
 				},
 			},
-			//先注释掉，因为测试使用的是本地存储:emptyDir{}
-			/*
+			// 如果需要在本地测试，没有共享存储环境，需要使用emptyDir{}
+			// 可以先注释掉下面这段VolumeClaimTemplates代码
+
 				VolumeClaimTemplates:[]corev1.PersistentVolumeClaim{
 					{
 						ObjectMeta:metav1.ObjectMeta{
-							Name:"dataDir",
+							Name:"redis-data",
+							
 						},
 						Spec:corev1.PersistentVolumeClaimSpec{
 							AccessModes:[]corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 							Resources:corev1.ResourceRequirements{
 								Requests:corev1.ResourceList{
 									corev1.ResourceStorage:resource.MustParse(
-										fmt.Sprintf("%vGi",etcd.Spec.Storage)),
+										fmt.Sprintf("%vGi",redisCluster.Spec.Storage)),
 								},
 							},
 						},
 					},
-				},*/
+				},
 		},
 	}
 }
