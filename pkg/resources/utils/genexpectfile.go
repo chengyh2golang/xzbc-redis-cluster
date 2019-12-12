@@ -70,7 +70,14 @@ func main() {
 		if err != nil {
 			fmt.Println("Fail to open file:", err)
 		}
-		defer file.Close()
+
+		defer func() {
+			if err != nil {
+				file.Close()
+			} else {
+				err = file.Close()
+			}
+		}()
 
 		//把redis-trib命令的字符串构建出来
 		redisTribCommand := redisTribScript(clusterSizeInt, redisClusterName, ns)
