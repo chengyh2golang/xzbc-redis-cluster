@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"k8s.io/client-go/util/retry"
 	"reflect"
+	"sync"
 	"xzbc-redis-cluster/pkg/resources/configmap"
+	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
 
@@ -16,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +32,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
+//var redisClusterSize = sync.Map{}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -62,7 +66,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner RedisCluster
+	/*
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &crdv1alpha1.RedisCluster{},
+	})
+	if err != nil {
+		return err
+	}
+	 */
+
+	err = c.Watch(&source.Kind{Type: &batchv1.Job{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &crdv1alpha1.RedisCluster{},
 	})
@@ -142,10 +156,17 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, err
 		}
 
-		//开始创建redis-trib这个deploy，这是之前的实现，现在直接使用pod去做redis-trib
-		//直接使用pod更优雅简单
-		//deploy := deployment.New(instance)
+		//创建准备做redis-trib的job
+		redisTribJob := job.New(instance)
+		if err := controllerutil.SetControllerReference(instance, redisTribJob, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+		err = r.client.Create(context.TODO(), redisTribJob)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
+		/*
 		pod := newPodForCR(instance)
 		// Set App instance as the owner and controller
 		//这是operator框架自带的设置ownerreference的方法
@@ -156,6 +177,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		 */
 
 		sts := statefulset.New(instance)
 		err = r.client.Create(context.TODO(), sts)
@@ -164,7 +186,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			go r.client.Delete(context.TODO(), headlessSvc)
 			go r.client.Delete(context.TODO(), cm)
 			go r.client.Delete(context.TODO(), clusterSvc)
-			go r.client.Delete(context.TODO(), pod)
+			go r.client.Delete(context.TODO(), redisTribJob)
 			return reconcile.Result{}, err
 		}
 
@@ -217,7 +239,7 @@ func toSpec(data string) crdv1alpha1.RedisClusterSpec {
 	return redisClusterSpec
 }
 
-
+/*
 // newPodForCR returns a busybox pod with the same name/namespace as the cr
 func newPodForCR(redisCluster *crdv1alpha1.RedisCluster) *corev1.Pod {
 	labels := map[string]string{
@@ -251,4 +273,5 @@ func newPodForCR(redisCluster *crdv1alpha1.RedisCluster) *corev1.Pod {
 			},
 		},
 	}
-}
+ }
+*/
