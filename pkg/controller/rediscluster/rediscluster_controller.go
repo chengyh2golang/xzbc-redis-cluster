@@ -233,7 +233,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
 		err := r.client.Update(context.TODO(), newScaleConfigMap)
 		fmt.Printf("创建configmap的报错信息：%v",err)
-		fmt.Print("test")
+		fmt.Println("test")
 		if err != nil {
 			return reconcile.Result{}, err
 		}
