@@ -241,7 +241,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		//创建scale job
 		fmt.Println("准备创建job")
 		newScaleJob := job.NewScaleJob(instance)
-		err = r.client.Update(context.TODO(), newScaleJob)
+		err = r.client.Create(context.TODO(), newScaleJob)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
