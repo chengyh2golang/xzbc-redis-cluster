@@ -220,14 +220,18 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		found.Spec = sts.Spec
 
 		//创建扩展rediscluster需要的configmap
+		fmt.Println("准备创建scale需要的configmap")
 		newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
 
+		fmt.Println("准备创建scale需要的configmap")
 		err := r.client.Update(context.TODO(), newScaleConfigMap)
+		fmt.Printf("创建configmap的报错信息：%v",err)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		//创建scale job
+		fmt.Println("准备创建job")
 		newScaleJob := job.NewScaleJob(instance)
 		err = r.client.Update(context.TODO(), newScaleJob)
 		if err != nil {
