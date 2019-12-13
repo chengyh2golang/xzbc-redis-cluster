@@ -33,7 +33,7 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 					RestartPolicy:corev1.RestartPolicyOnFailure,
 					Containers: []corev1.Container{
 						{
-							Name:    "redis-trib",
+							Name:    "redis-trib-scale",
 							Image: redisCluser.Spec.RedisTribImage,
 							ImagePullPolicy:corev1.PullIfNotPresent,
 							Command:[]string{
