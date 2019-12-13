@@ -219,6 +219,15 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		sts := statefulset.New(instance)
 		found.Spec = sts.Spec
 
+
+		//然后就去更新，更新要用retry操作去做
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			return r.client.Update(context.TODO(), found)
+		})
+		if retryErr != nil {
+			return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+		}
+
 		//创建扩展rediscluster需要的configmap
 		fmt.Println("准备创建scale需要的configmap")
 		newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
@@ -236,14 +245,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		err = r.client.Update(context.TODO(), newScaleJob)
 		if err != nil {
 			return reconcile.Result{}, err
-		}
-
-		//然后就去更新，更新要用retry操作去做
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return r.client.Update(context.TODO(), found)
-		})
-		if retryErr != nil {
-			return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 		}
 
 
