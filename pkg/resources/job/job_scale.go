@@ -15,7 +15,7 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 			APIVersion: "batch/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: redisCluser.Name,
+			Name: redisCluser.Name+"-scale",
 			Namespace: redisCluser.Namespace,
 			Labels:    map[string]string{"crd.xzbc.com.cn": redisCluser.Name},
 			OwnerReferences: []metav1.OwnerReference{
