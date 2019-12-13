@@ -40,7 +40,7 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 							Command:[]string{
 								"/bin/bash",
 								"-c",
-								"tail -f /dev/null",
+								"/tmp/generate-script && /tmp/redis-trib.sh",
 							},
 							Env:[]corev1.EnvVar{
 								//通过Sprintf把int32转换成了string
