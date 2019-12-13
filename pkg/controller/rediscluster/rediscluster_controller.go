@@ -4,19 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/util/retry"
 	"reflect"
-	"sync"
+
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
 
+	"k8s.io/client-go/util/retry"
 	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
-
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
