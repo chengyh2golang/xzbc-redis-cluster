@@ -29,7 +29,9 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 		},
 		Spec:batchv1.JobSpec{
 			Template:corev1.PodTemplateSpec{
+
 				Spec:corev1.PodSpec{
+					RestartPolicy:corev1.RestartPolicyOnFailure,
 					Containers: []corev1.Container{
 						{
 							Name:    "redis-trib",
