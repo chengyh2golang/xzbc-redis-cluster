@@ -1,15 +1,14 @@
 package job
 
 import (
-	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
-func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
+func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
@@ -40,14 +39,38 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 							Command:[]string{
 								"/bin/bash",
 								"-c",
+								//"/tmp/generate-scale-script && /tmp/redis-trib-scale.sh",
 								"tail -f /dev/null",
 							},
 							Env:[]corev1.EnvVar{
 								//通过Sprintf把int32转换成了string
-								{Name:"CLUSTER_SIZE",Value:fmt.Sprintf("%v",*redisCluser.Spec.Replicas)},
+								//{Name:"CLUSTER_SIZE",Value:fmt.Sprintf("%v",*redisCluser.Spec.Replicas)},
 								{Name:"REDISCLUSTER_NAME",Value:redisCluser.Name},
 								{Name:"NAMESPACE",Value:redisCluser.Namespace},
+								{
+									Name: "OLD_CLUSTER_SIZE",
+									ValueFrom: &corev1.EnvVarSource{
+										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: redisCluser.Name+"-scale",
+											},
+											Key: "old_cluster_size",
+										},
+									},
+								},
+								{
+									Name: "NEW_CLUSTER_SIZE",
+									ValueFrom: &corev1.EnvVarSource{
+										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: redisCluser.Name+"-scale",
+											},
+											Key: "new_cluster_size",
+										},
+									},
+								},
 							},
+
 						},
 					},
 				},

@@ -211,14 +211,36 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		//但是更新操作通常是不会去更新svc的，只需要更新sts
 		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
 		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
+
+		oldClusterSize := found.Spec.Replicas
+		newClusterSize := instance.Spec.Replicas
+		fmt.Printf("oldSize: %v, newSize: %v",oldClusterSize,newClusterSize)
+
 		sts := statefulset.New(instance)
 		found.Spec = sts.Spec
+
+		//创建扩展rediscluster需要的configmap
+		newScaleConfigMap := configmap.NewScaleConfigMap(instance,
+			fmt.Sprintf("%v",oldClusterSize), fmt.Sprintf("%v",newClusterSize))
+
+		err := r.client.Update(context.TODO(), newScaleConfigMap)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		//然后就去更新，更新要用retry操作去做
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			return r.client.Update(context.TODO(), found)
 		})
 		if retryErr != nil {
 			return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+		}
+
+		//创建scale job
+		newScaleJob := job.NewScaleJob(instance)
+		err = r.client.Update(context.TODO(), newScaleJob)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
 
 	}
