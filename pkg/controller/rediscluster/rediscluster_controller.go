@@ -232,6 +232,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		if newClusterSizeInt  > oldClusterSizeInt {
 			//要做扩容操作
+
+
 			fmt.Println("准备new sts")
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
@@ -240,7 +242,16 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//创建扩展rediscluster需要的configmap,这个configmap被scale job创建的pod引用
 			//使用：OLD_CLUSTER_SIZE和NEW_CLUSTER_SIZE
 			newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
-			err := r.client.Create(context.TODO(), newScaleConfigMap)
+			err := r.client.Get(context.TODO(), request.NamespacedName, newScaleConfigMap)
+			if err == nil {
+				fmt.Println("configmap存在，准备清理configmap-scale")
+				err = r.client.Delete(context.TODO(), newScaleConfigMap)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+			}
+			err = r.client.Create(context.TODO(), newScaleConfigMap)
+
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -275,12 +286,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 			//扩容后清理configmap
-			fmt.Println("准备清理configmap-scale")
-			err = r.client.Delete(context.TODO(), newScaleConfigMap)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			return reconcile.Result{}, nil
+
+
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
