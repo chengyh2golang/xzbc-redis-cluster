@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"math/rand"
+	"strings"
 	"time"
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
@@ -98,5 +99,5 @@ func RandString(len int) string {
 		b := r.Intn(26) + 65
 		bytes[i] = byte(b)
 	}
-	return string(bytes)
+	return strings.ToLower(string(bytes))
 }
