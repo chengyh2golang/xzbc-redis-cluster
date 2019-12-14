@@ -5,8 +5,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"math/rand"
+	"time"
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
+
+
 
 func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSize string)  *batchv1.Job {
 	return &batchv1.Job{
@@ -15,7 +19,7 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 			APIVersion: "batch/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: redisCluser.Name+"-scale",
+			Name: redisCluser.Name+"-job"+RandString(8),
 			Namespace: redisCluser.Namespace,
 			Labels:    map[string]string{"crd.xzbc.com.cn": redisCluser.Name},
 			OwnerReferences: []metav1.OwnerReference{
@@ -85,4 +89,14 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 		},
 	}
 
+}
+
+func RandString(len int) string {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	bytes := make([]byte, len)
+	for i := 0; i < len; i++ {
+		b := r.Intn(26) + 65
+		bytes[i] = byte(b)
+	}
+	return string(bytes)
 }

@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+//环境变量的实现方式不再使用configmap的方式
 func NewScaleConfigMap(redisCluster *v1alpha1.RedisCluster,oldClusterSize, newClusterSize string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta:metav1.TypeMeta{
