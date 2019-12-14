@@ -13,6 +13,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -241,15 +242,14 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//创建configmap
 			//创建扩展rediscluster需要的configmap,这个configmap被scale job创建的pod引用
 			//使用：OLD_CLUSTER_SIZE和NEW_CLUSTER_SIZE
-			newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
-			err := r.client.Get(context.TODO(), request.NamespacedName, newScaleConfigMap)
-			if err == nil {
-				fmt.Println("configmap存在，准备清理configmap-scale")
-				err = r.client.Delete(context.TODO(), newScaleConfigMap)
-				if err != nil {
-					return reconcile.Result{}, err
-				}
+			cm := &corev1.ConfigMap{}
+			err := r.client.Get(context.TODO(), request.NamespacedName, cm)
+			fmt.Println(cm)
+			if cm.Name == instance.Name+"-scale"{
+				fmt.Println(cm)
 			}
+
+			newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
 			err = r.client.Create(context.TODO(), newScaleConfigMap)
 
 			if err != nil {
