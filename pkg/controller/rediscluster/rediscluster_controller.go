@@ -194,12 +194,12 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		//redisClusterInfo.Store("redisClusterCurrentSpec",instance.Spec)
 
-		//retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		//	return r.client.Update(context.TODO(), instance)
-		//})
-		//if retryErr != nil {
-		//	fmt.Println(retryErr.Error())
-		//}
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			return r.client.Update(context.TODO(), instance)
+		})
+		if retryErr != nil {
+			fmt.Println(retryErr.Error())
+		}
 
 		return reconcile.Result{}, nil
 	} else if err != nil {
@@ -260,8 +260,12 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			instance.Annotations = map[string]string{
 				"crd.xzbc.com.cn/spec":toString(instance),
 			}
-
-
+			retryErr = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.client.Update(context.TODO(), instance)
+			})
+			if retryErr != nil {
+				fmt.Println(retryErr.Error())
+			}
 
 		} else if newClusterSize  < oldClusterSize {
 			//要做缩容操作
