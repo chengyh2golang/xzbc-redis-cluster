@@ -5,19 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
+	"sync"
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
 
-	"k8s.io/client-go/util/retry"
-	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,10 +25,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
-//var redisClusterSize = sync.Map{}
+var redisClusterInfo = sync.Map{}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -61,7 +61,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner RedisCluster
 	/*
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
@@ -189,15 +188,18 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		//创建完成之后还得去做一次更新
 		//把对应的annotation给更新上，因为后面需要用annotation去做判断是否需要去做更新操作
-		instance.Annotations = map[string]string{
-			"crd.xzbc.com.cn/spec":toString(instance),
-		}
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return r.client.Update(context.TODO(), instance)
-		})
-		if retryErr != nil {
-			fmt.Println(retryErr.Error())
-		}
+		//instance.Annotations = map[string]string{
+		//	"crd.xzbc.com.cn/spec":toString(instance),
+		//}
+
+		redisClusterInfo.Store("redisClusterCurrentSpec",instance.Spec)
+
+		//retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		//	return r.client.Update(context.TODO(), instance)
+		//})
+		//if retryErr != nil {
+		//	fmt.Println(retryErr.Error())
+		//}
 
 		return reconcile.Result{}, nil
 	} else if err != nil {
@@ -206,46 +208,85 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	//instance.Annotations["crd.xzbc.com.cn/spec"]这是老的信息
 	//instance.spec是最新的信息，使用DeepEqual方法比较是否相等
-	if ! reflect.DeepEqual(instance.Spec,toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])) {
+	//currentSpec  := toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])
+	//expectSpec := instance.Spec
+	specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
+	currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
+	fmt.Println(currentSpec)
+	expectSpec := instance.Spec
+	fmt.Println(expectSpec)
+
+	if ! reflect.DeepEqual(expectSpec,currentSpec) {
 		//如果不相等，就需要去更新，更新就是重建sts和svc
 		//但是更新操作通常是不会去更新svc的，只需要更新sts
 		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
 		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
 
-		oldClusterSize := fmt.Sprintf("%v",*found.Spec.Replicas)
-		newClusterSize := fmt.Sprintf("%v",*instance.Spec.Replicas)
-		fmt.Printf("oldSize: %v, newSize: %v",oldClusterSize, newClusterSize)
+		oldClusterSize := fmt.Sprintf("%v",*currentSpec.Replicas)
+		newClusterSize := fmt.Sprintf("%v",*expectSpec.Replicas)
 
-		sts := statefulset.New(instance)
-		found.Spec = sts.Spec
+		if newClusterSize  > oldClusterSize {
+			//要做扩容操作
+			sts := statefulset.New(instance)
+			found.Spec = sts.Spec
+
+			//创建configmap
+			//创建扩展rediscluster需要的configmap,这个configmap被scale job创建的pod引用
+			//使用：OLD_CLUSTER_SIZE和NEW_CLUSTER_SIZE
+			newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
+			err := r.client.Create(context.TODO(), newScaleConfigMap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			//创建scale job
+			newScaleJob := job.NewScaleJob(instance)
+			err = r.client.Create(context.TODO(), newScaleJob)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			//更新sts
+			//更新要用retry操作去做
+			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.client.Update(context.TODO(), found)
+			})
+			if retryErr != nil {
+				go r.client.Delete(context.TODO(), newScaleJob)
+				go r.client.Delete(context.TODO(), newScaleConfigMap)
+				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+			}
+
+			//TODO 更新instance的annotation
 
 
-		//然后就去更新，更新要用retry操作去做
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return r.client.Update(context.TODO(), found)
-		})
-		if retryErr != nil {
-			return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+
+		} else if newClusterSize  < oldClusterSize {
+			//要做缩容操作
+			sts := statefulset.New(instance)
+			found.Spec = sts.Spec
+
+			//更新sts
+
+
+			//创建configmap
+
+
+			//创建scale job
+
+		} else {
+			//不变更集群规模，做statefulset的更新操作
+			sts := statefulset.New(instance)
+			found.Spec = sts.Spec
+
+			//然后就去更新，更新要用retry操作去做
+			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.client.Update(context.TODO(), found)
+			})
+			if retryErr != nil {
+				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+			}
 		}
-
-		//创建扩展rediscluster需要的configmap
-		fmt.Println("准备创建scale需要的configmap")
-		newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
-		err := r.client.Create(context.TODO(), newScaleConfigMap)
-		fmt.Printf("创建configmap的报错信息：%v",err)
-		fmt.Println("test")
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		//创建scale job
-		fmt.Println("准备创建job")
-		newScaleJob := job.NewScaleJob(instance)
-		err = r.client.Create(context.TODO(), newScaleJob)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
 
 	}
 	return reconcile.Result{}, nil
