@@ -275,6 +275,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 			//扩容后清理configmap
+			fmt.Println("准备清理configmap-scale")
 			err = r.client.Delete(context.TODO(), newScaleConfigMap)
 			if err != nil {
 				return reconcile.Result{}, err
