@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
@@ -226,9 +227,12 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		newClusterSize := fmt.Sprintf("%v",*(instance.Spec.Replicas))
 
 		fmt.Println(oldClusterSize,newClusterSize)
+		oldClusterSizeInt,_ := strconv.Atoi(oldClusterSize)
+		newClusterSizeInt,_ := strconv.Atoi(newClusterSize)
 
-		if newClusterSize  > oldClusterSize {
+		if newClusterSizeInt  > oldClusterSizeInt {
 			//要做扩容操作
+			fmt.Println("准备new sts")
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
@@ -270,7 +274,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				fmt.Println(retryErr.Error())
 			}
 
-		} else if newClusterSize  < oldClusterSize {
+		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
