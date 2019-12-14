@@ -8,9 +8,8 @@ FROM docker.io/centos:7
 
 ADD ./redis-trib-rpms.tar.gz /tmp
 COPY ./redis-trib.repo /etc/yum.repos.d/
-COPY ./generate-script /tmp
 
-RUN yum install -y redis-trib bind-utils expect && yum clean all
+RUN yum install -y redis-trib bind-utils expect && rm -rf /tmp/yum/redis-trib-rpms &&  clean all
 ```
 
 
