@@ -24,7 +24,7 @@ func NewScaleConfigMap(redisCluster *v1alpha1.RedisCluster,oldClusterSize, newCl
 					Kind:"RedisCluster",
 				}),
 			},
-			Labels:map[string]string{"crd.xzbc.com.cn": redisCluster.Name},
+			Labels:map[string]string{"crd.xzbc.com.cn": redisCluster.Name+"-scale"},
 		},
 		Data: map[string]string{
 			"old_cluster_size":oldClusterSize,

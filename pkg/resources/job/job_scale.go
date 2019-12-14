@@ -8,7 +8,7 @@ import (
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
-func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
+func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSize string)  *batchv1.Job {
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
@@ -43,11 +43,15 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 								"/tmp/generate-scale-script && /tmp/redis-trib-scale.sh",
 								//"tail -f /dev/null",
 							},
+
 							Env:[]corev1.EnvVar{
 								//通过Sprintf把int32转换成了string
 								//{Name:"CLUSTER_SIZE",Value:fmt.Sprintf("%v",*redisCluser.Spec.Replicas)},
 								{Name:"REDISCLUSTER_NAME",Value:redisCluser.Name},
 								{Name:"NAMESPACE",Value:redisCluser.Namespace},
+								{Name:"OLD_CLUSTER_SIZE",Value:oldClusterSize},
+								{Name:"NEW_CLUSTER_SIZE",Value:newClusterSize},
+								/*
 								{
 									Name: "OLD_CLUSTER_SIZE",
 									ValueFrom: &corev1.EnvVarSource{
@@ -70,6 +74,8 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 										},
 									},
 								},
+
+								 */
 							},
 
 						},

@@ -13,7 +13,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -220,10 +219,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		//但是更新操作通常是不会去更新svc的，只需要更新sts
 		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
 		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
-
-		fmt.Println("进入if true逻辑，需要做扩容操作...")
-
-
 		oldClusterSize := fmt.Sprintf("%v",*(toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas))
 		newClusterSize := fmt.Sprintf("%v",*(instance.Spec.Replicas))
 
@@ -234,30 +229,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		if newClusterSizeInt  > oldClusterSizeInt {
 			//要做扩容操作
 
-
-			fmt.Println("准备new sts")
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
-			//创建configmap
-			//创建扩展rediscluster需要的configmap,这个configmap被scale job创建的pod引用
-			//使用：OLD_CLUSTER_SIZE和NEW_CLUSTER_SIZE
-			cm := &corev1.ConfigMap{}
-			err := r.client.Get(context.TODO(), request.NamespacedName, cm)
-			fmt.Println(cm)
-			if cm.Name == instance.Name+"-scale"{
-				fmt.Println(cm)
-			}
-
-			newScaleConfigMap := configmap.NewScaleConfigMap(instance, oldClusterSize, newClusterSize)
-			err = r.client.Create(context.TODO(), newScaleConfigMap)
-
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
 			//创建scale job
-			newScaleJob := job.NewScaleJob(instance)
+			newScaleJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize)
 			err = r.client.Create(context.TODO(), newScaleJob)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -270,7 +246,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			})
 			if retryErr != nil {
 				go r.client.Delete(context.TODO(), newScaleJob)
-				go r.client.Delete(context.TODO(), newScaleConfigMap)
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
 
@@ -284,10 +259,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if retryErr != nil {
 				fmt.Println(retryErr.Error())
 			}
-
-			//扩容后清理configmap
-
-
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
