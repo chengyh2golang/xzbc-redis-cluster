@@ -129,7 +129,7 @@ func main() {
 					reShardCommand := "redis-trib reshard "  + "--from all --to " +
 						reShard.nodeIDReceiving + " --slots " +
 						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes "  + reShard.clusterInfoNode + ";\n"
-					addNodeCommand += reShardCommand + "sleep 10;\n"
+					addNodeCommand += reShardCommand + "sleep 5;\n"
 				}
 
 				//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
