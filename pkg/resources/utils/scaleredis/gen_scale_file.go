@@ -99,9 +99,12 @@ func main() {
 			if len(addNodeCommand) > 0 && len(reShardInfoArray) > 0 {
 
 				for _, reShard := range reShardInfoArray {
-					reShardCommand := "redis-trib reshard " + reShard.clusterInfoNode +
-						" --from all --to " + reShard.nodeIDReceiving + " --slots " +
-						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes" + "\n"
+					//语法格式：redis-trib.rb reshard --from a8b3d0f9b12d63dab3b7337d602245d96dd55844
+					// --to f413fb7e6460308b17cdb71442798e1341b56cbc
+					// --slots 10923 --yes --pipeline 20 127.0.0.1:6383
+					reShardCommand := "redis-trib reshard "  + "--from all --to " +
+						reShard.nodeIDReceiving + " --slots " +
+						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes "  + reShard.clusterInfoNode + "\n"
 					addNodeCommand += reShardCommand
 				}
 
