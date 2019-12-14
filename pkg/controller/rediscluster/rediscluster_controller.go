@@ -274,6 +274,9 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				fmt.Println(retryErr.Error())
 			}
 
+			//扩容后清理configmap
+			go r.client.Delete(context.TODO(), newScaleConfigMap)
+
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
 			sts := statefulset.New(instance)
