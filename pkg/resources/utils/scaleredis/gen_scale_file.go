@@ -193,7 +193,7 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,
 			reShardInfo := reShardInfo{}
 			reShardInfo.clusterInfoNode = rediscluster01IPPort
 			reShardInfo.nodeIDReceiving = fetchIDByIP(itemIP)
-			reShardInfo.slotCountByMasterMgmt = 16384/(masterCount + 1)
+			reShardInfo.slotCountByMasterMgmt = 8192/(masterCount + 1)
 			reShardInfoArray = append(reShardInfoArray,reShardInfo)
 		}
 		masterCount += 1

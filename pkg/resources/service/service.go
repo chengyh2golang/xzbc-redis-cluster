@@ -2,11 +2,9 @@ package service
 
 import (
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
 )
 
 func New(redisCluster *v1alpha1.RedisCluster) *corev1.Service {
