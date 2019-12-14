@@ -13,62 +13,63 @@ import (
 	"time"
 )
 
-//定义expect的模板文件
-const scaleScriptTemplate=`#!/bin/bash
-#!/usr/bin/expect
+const scaleScriptFile = "/tmp/redis-trib-scale.sh"
 
-auto_create_redis_cluster() {
-    expect -c "set timeout -1;
-        spawn exec_command_template; 
-        expect {
-            *accept): {send -- yes\r;exp_continue;}
-            eof {exit 0;}
-        }";
+//定义redis-trib做扩容的模板文件
+const addScriptTemplate=`#!/bin/bash
+
+add_redis_cluster() {
+    exec_command_template;
 }
 
 ## call func
-auto_create_redis_cluster`
+add_redis_cluster`
 
 func main() {
 	//获取系统环境变量，需要获取3个：
 	// 集群的规模大小
 	// redisClusterName实例的名字
 	// namespace
-	clusterSize := os.Getenv("CLUSTER_SIZE")
-	clusterSizeInt,_ := strconv.Atoi(clusterSize)
+	oldClusterSize := os.Getenv("OLD_CLUSTER_SIZE")
+	oldClusterSizeInt,_ := strconv.Atoi(oldClusterSize)
+	newClusterSize := os.Getenv("NEW_CLUSTER_SIZE")
+	newClusterSizeInt,_ := strconv.Atoi(newClusterSize)
 	redisClusterName := os.Getenv("REDISCLUSTER_NAME")
 	ns := os.Getenv("NAMESPACE")
-	if len(clusterSize) == 0 || len(redisClusterName) == 0 || len(ns) == 0{
+	if len(oldClusterSize) == 0 || len(newClusterSize) == 0 ||
+		len(redisClusterName) == 0 || len(ns) == 0{
 		panic(errors.New("读取环境变量出错"))
 	}
 
 	//判断所有redis cluster的节点是否都已开始监听6379端口
-	envReady := checkRedisClusterNodeReady(clusterSizeInt, redisClusterName, ns)
+	envReady := checkRedisClusterNodeReady(newClusterSizeInt, redisClusterName, ns)
 
 	//如果集群节点redis服务都已经启动正常
 	//准备使用reids-trib来初始化集群
 	//使用redis-trib做初始化，必须要输入yes，所以使用expect来实现
-	//这需要构建expect脚本
+	//这需要构建scale shell脚本
 	if envReady {
-		//定义expect文件路径
-		expectScriptFile := "/tmp/redis-trib.sh"
-
 		//检查这个文件是否存在，如果不存在就创建
-		exists, err := checkFileExists(expectScriptFile)
+		exists, err := checkFileExists(scaleScriptFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if !exists {
-			_, err := os.Create(expectScriptFile)
+			_, err := os.Create(scaleScriptFile)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			err := os.Remove(scaleScriptFile)
 			if err != nil {
 				panic(err)
 			}
 		}
 
 		//打开文件
-		file, err := os.OpenFile(expectScriptFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
+		file, err := os.OpenFile(scaleScriptFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 		if err != nil {
-			fmt.Println("Fail to open file:", err)
+			log.Println("Fail to open file:", err)
 		}
 
 		defer func() {
@@ -79,47 +80,66 @@ func main() {
 			}
 		}()
 
-		//把redis-trib命令的字符串构建出来
-		redisTribCommand := redisTribScript(clusterSizeInt, redisClusterName, ns)
+		//判断是做扩容还是做缩容
+		//如果是做扩容
+		if newClusterSizeInt > oldClusterSizeInt {
+			//把redis-trib做scale的命令字符串构建出来
+			redisTribCommand := redisTribAddScript(oldClusterSizeInt,newClusterSizeInt,
+				redisClusterName, ns)
 
-		//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
-		execScript := strings.ReplaceAll(scaleScriptTemplate, "exec_command_template", redisTribCommand)
+			//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
+			execScript := strings.ReplaceAll(addScriptTemplate, "exec_command_template", redisTribCommand)
 
-		//写expect文件
-		bufReader := bufio.NewWriter(file)
-		_, _ = bufReader.Write([]byte(fmt.Sprintf(execScript)))
-		//_, _ = bufReader.WriteString("string content\n")
+			//写shell文件
+			bufReader := bufio.NewWriter(file)
+			_, _ = bufReader.Write([]byte(fmt.Sprintf(execScript)))
+			//_, _ = bufReader.WriteString("string content\n")
 
-		//保存文件,这会生成/tmp/redis-trib.sh文件
-		_ = bufReader.Flush()
+			//保存文件,这会生成/tmp/redis-trib-scale.sh文件
+			_ = bufReader.Flush()
 
-		//给/tmp/redis-trib.sh赋予可执行权限，以在pod的command中执行它
-		_ = exec.Command("/bin/bash", "-c", "chmod +x "+expectScriptFile).Run()
+			//给/tmp/redis-trib.sh赋予可执行权限，以在pod的command中执行它
+			_ = exec.Command("/bin/bash", "-c", "chmod +x "+scaleScriptFile).Run()
+		} else { //做缩容
+
+		}
+
 	}
 }
 
 //fullname: rediscluster01-0.rediscluster01.default.svc.cluster.local
-//构造一个类似于这样的脚本：
-// redis-trib create --replicas 1 172.16.73.157:6379 172.16.73.166:6379 172.16.73.169:6379 172.16.73.157:6379 172.16.73.166:6379 172.16.73.169:6379
-func redisTribScript(clusterSize int,redisClusterName string,ns string) string {
+//扩容构造一个类似于这样的脚本：
+//redis-trib add-node 172.16.73.157:6379 172.16.73.166:6379，
+// 这个 172.16.73.166是任意一个现有集群中的节点，使用rediscluster01-0的ip
+//redis-trib add-node 172.16.73.158:6379 172.16.73.166:6379
+func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName string,ns string) string {
 	var resultSlice []string
-	resultSlice = append(resultSlice,"redis-trib ","create ","--replicas 1 ")
 
-	for i:=0; i< clusterSize;i++ {
-		itemFullname := redisClusterName + "-" + strconv.Itoa(i) + "." +
+	//构建rediscluster01-0的ip
+	//得到的结果：172.16.73.166:6379
+	rediscluster01String := redisClusterName + "-0" + "." +
+		redisClusterName + "." + ns + ".svc.cluster.local"
+
+	rediscluster01IP, _ := fetchIPByFullName(rediscluster01String)
+	rediscluster01IPPort := rediscluster01IP + ":6379"
+
+	for i:=oldClusterSizeInt; i< newClusterSizeInt;i++ {
+		itemFullName := redisClusterName + "-" + strconv.Itoa(i) + "." +
 			redisClusterName + "." + ns + ".svc.cluster.local"
 
-		itemIP, _ := fetchIPByFullName(itemFullname)
+		itemIP, _ := fetchIPByFullName(itemFullName)
 
 		//给这个ip加上:6379，加入slice当中
 		item := fmt.Sprintf("%v:6379 ",itemIP)
-		resultSlice = append(resultSlice,item)
+		scripItem := item + " " + rediscluster01IPPort
+		resultSlice = append(resultSlice,scripItem)
 	}
 
-	//轮询这个slice，把所有元素拼接成整个字符串，并返回
+	//轮询这个slice，把所有元素拼接成：
+	//多行：redis-trib add-node 172.16.73.157:6379 172.16.73.166:6379，并返回
 	result := ""
 	for _,stringItem := range resultSlice {
-		result +=  stringItem
+		result +=  "redis-trib add-node " + stringItem + "\n"
 	}
 	return result
 }

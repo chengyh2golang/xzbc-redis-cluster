@@ -133,6 +133,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		//创建redis配置文件需要用到的configMap
 		cm := configmap.New(instance)
+
 		err = r.client.Create(context.TODO(), cm)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -212,9 +213,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 	//expectSpec := instance.Spec
 	specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
 	currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
-	fmt.Println(currentSpec)
 	expectSpec := instance.Spec
-	fmt.Println(expectSpec)
 
 	if ! reflect.DeepEqual(expectSpec,currentSpec) {
 		//如果不相等，就需要去更新，更新就是重建sts和svc
@@ -257,8 +256,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
 
-			//TODO 更新instance的annotation
-
+			//如果更新成功，更新sync.map中redisClusterCurrentSpec的值为最新值
+			redisClusterInfo.Store("redisClusterCurrentSpec",found.Spec)
 
 
 		} else if newClusterSize  < oldClusterSize {
