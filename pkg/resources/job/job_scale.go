@@ -34,13 +34,14 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 					Containers: []corev1.Container{
 						{
 							Name:    "redis-trib-scale",
-							Image: redisCluser.Spec.RedisTribImage,
+							Image: redisCluser.Spec.RedisTribScaleImage,
 							ImagePullPolicy:corev1.PullIfNotPresent,
 							Command:[]string{
 								"/bin/bash",
 								"-c",
 								//"/tmp/generate-scale-script && /tmp/redis-trib-scale.sh",
-								"tail -f /dev/null",
+								"/tmp/generate-scale-script && tail -f /dev/null",
+								//"tail -f /dev/null",
 							},
 							Env:[]corev1.EnvVar{
 								//通过Sprintf把int32转换成了string

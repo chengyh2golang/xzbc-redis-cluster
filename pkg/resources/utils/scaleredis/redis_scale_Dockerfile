@@ -9,8 +9,20 @@ FROM docker.io/centos:7
 ADD ./redis-trib-rpms.tar.gz /tmp
 COPY ./redis-trib.repo /etc/yum.repos.d/
 
-RUN yum install -y redis-trib bind-utils expect && rm -rf /tmp/yum/redis-trib-rpms &&  clean all
+RUN yum install -y redis-trib bind-utils expect && rm -rf /tmp/redis-trib-rpms && yum clean all
 ```
+
+#执行基础镜像构建：docker build -t redis-trib-base:1.0 .
+
+
+#基础镜像准备好之后，先编译gen_scale_file.go：go build -o generate-scale-script gen_scale_file.go
+#做好redis-trib的基础镜像之后，开始构建用于做扩缩容的功能镜像
+#Dockerfile文件内容
+```
+FROM redis-trib-base:1.0
+COPY generate-scale-script /tmp
+```
+
 
 
 #说明

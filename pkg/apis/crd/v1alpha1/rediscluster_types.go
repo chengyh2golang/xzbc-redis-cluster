@@ -22,6 +22,8 @@ type RedisClusterSpec struct {
 	StorageClassName string `json:"storageClassName"`
 	Resources corev1.ResourceRequirements `json:"resources"`
 	RedisTribImage string `json:"redistribimage"`
+	RedisTribScaleImage string `json:"redistribscaleimage"`
+
 }
 
 // RedisClusterStatus defines the observed state of RedisCluster

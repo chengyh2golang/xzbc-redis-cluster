@@ -7,5 +7,6 @@ spec:
   replicas: 6
   image: redis
   redistribimage: redis-trib:1.0
+  redistribscaleimage: redis-trib-scale:1.0
   storage: 5Gi
   storageClassName: nfs
