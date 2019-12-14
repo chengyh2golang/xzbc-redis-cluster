@@ -37,7 +37,7 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 					Containers: []corev1.Container{
 						{
 							Name:    "redis-trib-scale",
-							Image: redisCluser.Spec.RedisTribScaleImage,
+							Image: redisCluser.Spec.RedisTribImage,
 							ImagePullPolicy:corev1.PullIfNotPresent,
 							Command:[]string{
 								"/bin/bash",
@@ -47,6 +47,7 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 							},
 							Env:[]corev1.EnvVar{
 								{Name:"REDISCLUSTER_NAME",Value:redisCluser.Name},
+								{Name:"CLUSTER_OP_TYPE",Value:"scale"},
 								{Name:"NAMESPACE",Value:redisCluser.Namespace},
 								{Name:"OLD_CLUSTER_SIZE",Value:oldClusterSize},
 								{Name:"NEW_CLUSTER_SIZE",Value:newClusterSize},
