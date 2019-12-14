@@ -263,7 +263,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
 
-			//如果更新成功
+			//如果更新成功,把最新的spec信息更新进annotation
 			instance.Annotations = map[string]string{
 				"crd.xzbc.com.cn/spec":toString(instance),
 			}
@@ -275,7 +275,10 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 			//扩容后清理configmap
-			go r.client.Delete(context.TODO(), newScaleConfigMap)
+			err = r.client.Delete(context.TODO(), newScaleConfigMap)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
