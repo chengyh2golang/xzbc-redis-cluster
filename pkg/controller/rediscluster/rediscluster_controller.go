@@ -222,8 +222,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		fmt.Println("进入if true逻辑，需要做扩容操作...")
 
 
-		oldClusterSize := fmt.Sprintf("%v",toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas)
-		newClusterSize := fmt.Sprintf("%v",instance.Spec.Replicas)
+		oldClusterSize := fmt.Sprintf("%v",*(toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas))
+		newClusterSize := fmt.Sprintf("%v",*(instance.Spec.Replicas))
 
 		fmt.Println(oldClusterSize,newClusterSize)
 
