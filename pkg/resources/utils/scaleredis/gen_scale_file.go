@@ -24,8 +24,14 @@ exec_command_template
 
 ## call func
 add_redis_cluster
-reshard_redis_cluster
 `
+
+type reShardInfo struct {
+	clusterInfoNode string  //执行reShard时，需要指定一个现有集群中的节点，格式：ip:6379
+	slotCountByMasterMgmt int //为了平衡每个master管理的slot的个数,16384/master个数
+	nodeIDReceiving string
+	//sourceNodeID string  //使用all
+}
 
 func main() {
 	//获取系统环境变量，需要获取3个：
@@ -85,25 +91,39 @@ func main() {
 		//判断是做扩容还是做缩容
 		//如果是做扩容
 		if newClusterSizeInt > oldClusterSizeInt {
+
 			//把redis-trib做scale的命令字符串构建出来
-			redisTribCommand := redisTribAddScript(oldClusterSizeInt,newClusterSizeInt,
+			addNodeCommand,reShardInfoArray := redisTribAddScript(oldClusterSizeInt,newClusterSizeInt,
 				redisClusterName, ns)
 
-			//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
-			execScript := strings.ReplaceAll(addScriptTemplate, "exec_command_template", redisTribCommand)
+			if len(addNodeCommand) > 0 && len(reShardInfoArray) > 0 {
 
-			//写shell文件
-			bufReader := bufio.NewWriter(file)
-			_, _ = bufReader.Write([]byte(fmt.Sprintf(execScript)))
-			//_, _ = bufReader.WriteString("string content\n")
+				for _, reShard := range reShardInfoArray {
+					reShardCommand := "redis-trib reshard " + reShard.clusterInfoNode +
+						" --from all --to " + reShard.nodeIDReceiving + " --slots " +
+						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes" + "\n"
+					addNodeCommand += reShardCommand
+				}
 
-			//保存文件,这会生成/tmp/redis-trib-scale.sh文件
-			_ = bufReader.Flush()
+				//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
+				execScript := strings.ReplaceAll(addScriptTemplate, "exec_command_template", addNodeCommand)
 
-			//给/tmp/redis-trib.sh赋予可执行权限，以在pod的command中执行它
-			_ = exec.Command("/bin/bash", "-c", "chmod +x "+scaleScriptFile).Run()
+				//写shell文件
+				bufReader := bufio.NewWriter(file)
+				_, _ = bufReader.Write([]byte(fmt.Sprintf(execScript)))
+				//_, _ = bufReader.WriteString("string content\n")
+
+				//保存文件,这会生成/tmp/redis-trib-scale.sh文件
+				_ = bufReader.Flush()
+
+				//给/tmp/redis-trib.sh赋予可执行权限，以在pod的command中执行它
+				_ = exec.Command("/bin/bash", "-c", "chmod +x "+scaleScriptFile).Run()
+			} else {
+				log.Printf("无法解析出add-node命令")
+			}
+
 		} else { //做缩容
-
+		//TODO 待实现缩容逻辑
 		}
 
 	}
@@ -114,8 +134,10 @@ func main() {
 //redis-trib add-node 172.16.73.157:6379 172.16.73.166:6379，
 // 这个 172.16.73.166是任意一个现有集群中的节点，使用rediscluster01-0的ip
 //redis-trib add-node 172.16.73.158:6379 172.16.73.166:6379
-func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName string,ns string) string {
+func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,
+	redisClusterName string,ns string) (string,[]reShardInfo) {
 	var resultSlice []string
+	var reShardInfoArray []reShardInfo
 
 	//构建rediscluster01-0的ip
 	//得到的结果：172.16.73.166:6379
@@ -124,6 +146,8 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName
 
 	rediscluster01IP, _ := fetchIPByFullName(rediscluster01String)
 	rediscluster01IPPort := rediscluster01IP + ":6379"
+
+	masterCount := oldClusterSizeInt/2
 
 	for i:=oldClusterSizeInt; i< newClusterSizeInt;i++ {
 		itemFullName := redisClusterName + "-" + strconv.Itoa(i) + "." +
@@ -135,6 +159,18 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName
 		item := fmt.Sprintf("%v:6379 ",itemIP)
 		scripItem := item + " " + rediscluster01IPPort
 		resultSlice = append(resultSlice,scripItem)
+
+		//在以副本数为1的假定条件下，每2个节点，一个master，一个slave
+		//每增加一个master，做一次reshard
+		if i % 2 == 0 {
+			reShardInfo := reShardInfo{}
+			reShardInfo.clusterInfoNode = rediscluster01IPPort
+			reShardInfo.nodeIDReceiving = fetchIDByIP(itemIP)
+			reShardInfo.slotCountByMasterMgmt = 16384/(masterCount + 1)
+			reShardInfoArray = append(reShardInfoArray,reShardInfo)
+		}
+		masterCount += 1
+
 	}
 
 	//轮询这个slice，把所有元素拼接成：
@@ -148,10 +184,7 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName
 		}
 
 	}
-
-	//构建redis-trib reshard
-
-	return result
+	return result,reShardInfoArray
 }
 
 //检查文件是否存在
@@ -164,6 +197,23 @@ func checkFileExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+
+//redis-trib check 172.16.0.31:6379 | grep 172.16.0.31 | grep -v Check | awk '{print $2}'
+//得到70451029303870d124cc74cb8e4fae9962f748b8这样一个id
+func fetchIDByIP(ip string) string {
+	cmd := exec.Command("/bin/bash",
+		"-c",
+		"redis-trib check " + ip + ":6379" +
+		" | grep " + ip + " | grep -v Check | awk '{print $2}'",
+		)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("fetch id by ip failed")
+		return ""
+	}
+	return strings.Trim(string(output),"\n")
 }
 
 func fetchIPByFullName (fullName string) (string,error) {
