@@ -280,6 +280,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+			return reconcile.Result{}, nil
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
