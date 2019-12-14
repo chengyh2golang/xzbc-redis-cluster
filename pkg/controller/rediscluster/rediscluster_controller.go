@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
+	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -25,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
+
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
@@ -126,14 +128,12 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	//如果查到了，并且不是被删除，就判断它所关联的资源是否存在
-	// Check if this Pod already exists
 	found := &appsv1.StatefulSet{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 
 		//创建redis配置文件需要用到的configMap
 		cm := configmap.New(instance)
-
 		err = r.client.Create(context.TODO(), cm)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -179,7 +179,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		sts := statefulset.New(instance)
 		err = r.client.Create(context.TODO(), sts)
 		if err != nil {
-			//如果创建sts报错，把之前创建的资源删除后再返回错误
+			//如果创建sts报错，把之前创建的关联资源删除后再返回错误
 			go r.client.Delete(context.TODO(), headlessSvc)
 			go r.client.Delete(context.TODO(), cm)
 			go r.client.Delete(context.TODO(), clusterSvc)
@@ -195,6 +195,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		//redisClusterInfo.Store("redisClusterCurrentSpec",instance.Spec)
 
+		//做更新操作，使用retry来防止panic
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			return r.client.Update(context.TODO(), instance)
 		})
@@ -203,32 +204,24 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		}
 
 		return reconcile.Result{}, nil
+
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	//instance.Annotations["crd.xzbc.com.cn/spec"]这是老的信息
-	//instance.spec是最新的信息，使用DeepEqual方法比较是否相等
-
-	//specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
-	//currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
-	//expectSpec := instance.Spec
-
+	//instance.spec是期望的最新的信息，使用DeepEqual方法比较是否相等
 	if ! reflect.DeepEqual(instance.Spec,toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])) {
 		//如果不相等，就需要去更新，更新就是重建sts和svc
 		//但是更新操作通常是不会去更新svc的，只需要更新sts
-		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
-		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
 		oldClusterSize := fmt.Sprintf("%v",*(toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas))
 		newClusterSize := fmt.Sprintf("%v",*(instance.Spec.Replicas))
 
-		fmt.Println(oldClusterSize,newClusterSize)
 		oldClusterSizeInt,_ := strconv.Atoi(oldClusterSize)
 		newClusterSizeInt,_ := strconv.Atoi(newClusterSize)
 
 		if newClusterSizeInt  > oldClusterSizeInt {
 			//要做扩容操作
-
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
@@ -266,10 +259,13 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			found.Spec = sts.Spec
 
 			//更新sts
-
-
-			//创建configmap
-
+			//然后就去更新，更新要用retry操作去做
+			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.client.Update(context.TODO(), found)
+			})
+			if retryErr != nil {
+				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
+			}
 
 			//创建scale job
 

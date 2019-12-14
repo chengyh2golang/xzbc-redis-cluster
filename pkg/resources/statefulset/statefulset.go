@@ -71,15 +71,6 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								"/etc/redis/redis.conf",
 								"--protected-mode no",
 							},
-							/*
-								Lifecycle:&corev1.Lifecycle{
-									PreStop:&corev1.Handler{
-										Exec:&corev1.ExecAction{
-											Command:[]string{
-											},
-										},
-									},
-								},*/
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -110,7 +101,6 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 			},
 			// 如果需要在本地测试，没有共享存储环境，需要使用emptyDir{}
 			// 可以先注释掉下面这段VolumeClaimTemplates代码
-
 				VolumeClaimTemplates:[]corev1.PersistentVolumeClaim{
 					{
 						ObjectMeta:metav1.ObjectMeta{
@@ -123,9 +113,8 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 							Resources:corev1.ResourceRequirements{
 								Requests:corev1.ResourceList{
 									corev1.ResourceStorage:resource.MustParse(
-										//fmt.Sprintf("%vGi",redisCluster.Spec.Storage)),
+										//cr里定义的storage的格式需要是"5Gi"，string类型
 									redisCluster.Spec.Storage),
-
 								},
 							},
 						},

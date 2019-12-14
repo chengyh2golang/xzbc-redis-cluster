@@ -16,6 +16,27 @@ import (
 const scaleScriptFile = "/tmp/redis-trib-scale.sh"
 
 //定义redis-trib做扩容的模板文件
+// 需要生成类似这样一个redis-trib的扩容脚本
+/*
+#!/bin/bash
+
+add_redis_cluster() {
+redis-trib add-node 172.16.0.31:6379  172.16.0.24:6379;
+sleep 5;
+redis-trib add-node --slave 172.16.0.32:6379  172.16.0.24:6379;
+sleep 5;
+redis-trib add-node 172.16.0.33:6379  172.16.0.24:6379;
+sleep 5;
+redis-trib add-node --slave 172.16.0.34:6379  172.16.0.24:6379;
+sleep 5;
+redis-trib reshard --from all --to 31810e94154682e5aaf831a48a836ee9f70a222d --slots 4096 --yes 172.16.0.24:6379;
+redis-trib reshard --from all --to ae8ae95eb83d31015f4292e48f7faea3d7d46d8d --slots 2730 --yes 172.16.0.24:6379;
+
+}
+
+## call func
+add_redis_cluster
+ */
 const addScriptTemplate=`#!/bin/bash
 
 add_redis_cluster() {
@@ -27,15 +48,18 @@ add_redis_cluster
 `
 
 type reShardInfo struct {
-	clusterInfoNode string  //执行reShard时，需要指定一个现有集群中的节点，格式：ip:6379
+	//执行reShard时，需要指定一个现有集群中的节点，格式：ip:6379
+	//使用的是集群的第一个节点，它的域名类似：rediscluster01-0.rediscluster01.default.svc.cluster.local
+	//基于这个域名去获取ip
+	clusterInfoNode string
 	slotCountByMasterMgmt int //为了平衡每个master管理的slot的个数,16384/master个数
-	nodeIDReceiving string
+	nodeIDReceiving string //接收slot的node id，指定的是新加进来的master，新增4个节点，就是2个master
 	//sourceNodeID string  //使用all
 }
 
 func main() {
-	//获取系统环境变量，需要获取3个：
-	// 集群的规模大小
+	//获取系统环境变量，需要获取4个：
+	// 扩容前集群的规模大小和扩容后集群的大小
 	// redisClusterName实例的名字
 	// namespace
 	oldClusterSize := os.Getenv("OLD_CLUSTER_SIZE")

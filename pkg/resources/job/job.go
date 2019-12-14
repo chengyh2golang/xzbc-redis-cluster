@@ -2,8 +2,8 @@ package job
 
 import (
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
@@ -16,7 +16,7 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 			APIVersion: "batch/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: redisCluser.Name,
+			Name: redisCluser.Name + "-job-" + RandString(8),
 			Namespace: redisCluser.Namespace,
 			Labels:    map[string]string{"crd.xzbc.com.cn": redisCluser.Name},
 			OwnerReferences: []metav1.OwnerReference{
@@ -31,7 +31,7 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 			Template:corev1.PodTemplateSpec{
 
 				Spec:corev1.PodSpec{
-					RestartPolicy:corev1.RestartPolicyOnFailure,
+					RestartPolicy:corev1.RestartPolicyNever,
 					Containers: []corev1.Container{
 						{
 							Name:    "redis-trib",
@@ -54,5 +54,4 @@ func New(redisCluser *v1alpha1.RedisCluster)  *batchv1.Job {
 			},
 		},
 	}
-
 }
