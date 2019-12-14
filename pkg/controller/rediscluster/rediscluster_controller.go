@@ -219,8 +219,13 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
 		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
 
+		fmt.Println("进入if true逻辑，需要做扩容操作...")
+
+
 		oldClusterSize := fmt.Sprintf("%v",toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas)
 		newClusterSize := fmt.Sprintf("%v",instance.Spec.Replicas)
+
+		fmt.Println(oldClusterSize,newClusterSize)
 
 		if newClusterSize  > oldClusterSize {
 			//要做扩容操作
