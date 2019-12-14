@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sync"
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
@@ -29,7 +28,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
-var redisClusterInfo = sync.Map{}
+//var redisClusterInfo = sync.Map{}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -189,11 +188,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		//创建完成之后还得去做一次更新
 		//把对应的annotation给更新上，因为后面需要用annotation去做判断是否需要去做更新操作
-		//instance.Annotations = map[string]string{
-		//	"crd.xzbc.com.cn/spec":toString(instance),
-		//}
+		instance.Annotations = map[string]string{
+			"crd.xzbc.com.cn/spec":toString(instance),
+		}
 
-		redisClusterInfo.Store("redisClusterCurrentSpec",instance.Spec)
+		//redisClusterInfo.Store("redisClusterCurrentSpec",instance.Spec)
 
 		//retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		//	return r.client.Update(context.TODO(), instance)
@@ -209,10 +208,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 	//instance.Annotations["crd.xzbc.com.cn/spec"]这是老的信息
 	//instance.spec是最新的信息，使用DeepEqual方法比较是否相等
-	//currentSpec  := toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])
+
+	//specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
+	//currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
 	//expectSpec := instance.Spec
-	specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
-	currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
+	currentSpec  := toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])
 	expectSpec := instance.Spec
 
 	if ! reflect.DeepEqual(expectSpec,currentSpec) {
@@ -256,8 +256,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
 
-			//如果更新成功，更新sync.map中redisClusterCurrentSpec的值为最新值
-			redisClusterInfo.Store("redisClusterCurrentSpec",found.Spec)
+			//如果更新成功
+			instance.Annotations = map[string]string{
+				"crd.xzbc.com.cn/spec":toString(instance),
+			}
+
 
 
 		} else if newClusterSize  < oldClusterSize {

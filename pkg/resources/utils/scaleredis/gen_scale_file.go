@@ -104,7 +104,7 @@ func main() {
 					// --slots 10923 --yes --pipeline 20 127.0.0.1:6383
 					reShardCommand := "redis-trib reshard "  + "--from all --to " +
 						reShard.nodeIDReceiving + " --slots " +
-						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes "  + reShard.clusterInfoNode + "\n"
+						strconv.Itoa(reShard.slotCountByMasterMgmt) + " --yes "  + reShard.clusterInfoNode + ";\n"
 					addNodeCommand += reShardCommand
 				}
 
@@ -182,8 +182,10 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,
 	for k,stringItem := range resultSlice {
 		if k % 2 == 0 {
 			result +=  "redis-trib add-node " + stringItem + ";" + "\n"
+			result += "sleep 5; \n"
 		} else {
 			result +=  "redis-trib add-node --slave " + stringItem + ";" + "\n"
+			result += "sleep 5; \n"
 		}
 
 	}

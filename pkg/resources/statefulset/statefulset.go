@@ -14,7 +14,6 @@ const (
 	RedisConfigRelativePath = "redis.conf"
 )
 
-
 func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
