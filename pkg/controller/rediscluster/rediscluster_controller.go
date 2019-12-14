@@ -212,17 +212,15 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 	//specInSyncMap, _ := redisClusterInfo.Load("redisClusterCurrentSpec")
 	//currentSpec := specInSyncMap.(crdv1alpha1.RedisClusterSpec)
 	//expectSpec := instance.Spec
-	currentSpec  := toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])
-	expectSpec := instance.Spec
 
-	if ! reflect.DeepEqual(expectSpec,currentSpec) {
+	if ! reflect.DeepEqual(instance.Spec,toSpec(instance.Annotations["crd.xzbc.com.cn/spec"])) {
 		//如果不相等，就需要去更新，更新就是重建sts和svc
 		//但是更新操作通常是不会去更新svc的，只需要更新sts
 		//TODO 更新操作（增加副本，删除副本）还需要有reids-trib的实现
 		//现在的需求集中在集群的创建，还不涉及到更新集群，所以留给todo去做
 
-		oldClusterSize := fmt.Sprintf("%v",*currentSpec.Replicas)
-		newClusterSize := fmt.Sprintf("%v",*expectSpec.Replicas)
+		oldClusterSize := fmt.Sprintf("%v",toSpec(instance.Annotations["crd.xzbc.com.cn/spec"]).Replicas)
+		newClusterSize := fmt.Sprintf("%v",instance.Spec.Replicas)
 
 		if newClusterSize  > oldClusterSize {
 			//要做扩容操作
