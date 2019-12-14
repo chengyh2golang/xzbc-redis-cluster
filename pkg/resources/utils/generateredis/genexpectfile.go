@@ -27,7 +27,8 @@ auto_create_redis_cluster() {
 }
 
 ## call func
-auto_create_redis_cluster`
+auto_create_redis_cluster
+`
 
 func main() {
 	//获取系统环境变量，需要获取3个：

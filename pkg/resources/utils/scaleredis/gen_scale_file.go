@@ -19,11 +19,13 @@ const scaleScriptFile = "/tmp/redis-trib-scale.sh"
 const addScriptTemplate=`#!/bin/bash
 
 add_redis_cluster() {
-    exec_command_template;
+exec_command_template
 }
 
 ## call func
-add_redis_cluster`
+add_redis_cluster
+reshard_redis_cluster
+`
 
 func main() {
 	//获取系统环境变量，需要获取3个：
@@ -138,9 +140,17 @@ func redisTribAddScript(oldClusterSizeInt,newClusterSizeInt int,redisClusterName
 	//轮询这个slice，把所有元素拼接成：
 	//多行：redis-trib add-node 172.16.73.157:6379 172.16.73.166:6379，并返回
 	result := ""
-	for _,stringItem := range resultSlice {
-		result +=  "redis-trib add-node " + stringItem + "\n"
+	for k,stringItem := range resultSlice {
+		if k % 2 == 0 {
+			result +=  "redis-trib add-node " + stringItem + ";" + "\n"
+		} else {
+			result +=  "redis-trib add-node --slave " + stringItem + ";" + "\n"
+		}
+
 	}
+
+	//构建redis-trib reshard
+
 	return result
 }
 
