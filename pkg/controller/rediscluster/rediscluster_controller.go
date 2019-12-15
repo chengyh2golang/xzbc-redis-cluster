@@ -255,6 +255,15 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
 			//要做缩容操作
+			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
+
+			//创建scale delete job
+			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize)
+			err = r.client.Create(context.TODO(), newDelJob)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
@@ -267,7 +276,16 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
 
-			//创建scale job
+			//如果更新成功,把最新的spec信息更新进annotation
+			instance.Annotations = map[string]string{
+				"crd.xzbc.com.cn/spec":toString(instance),
+			}
+			retryErr = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.client.Update(context.TODO(), instance)
+			})
+			if retryErr != nil {
+				fmt.Println(retryErr.Error())
+			}
 
 		} else {
 			//不变更集群规模，做statefulset的更新操作
@@ -286,6 +304,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 	}
 	return reconcile.Result{}, nil
 }
+
 
 func toString(redisCluster *crdv1alpha1.RedisCluster) string {
 	bytes, _ := json.Marshal(redisCluster.Spec)

@@ -1,0 +1,23 @@
+>>> Performing Cluster Check (using node 172.16.73.146:6379)
+M: 4755e7640c7c54df1653911abd515001b85817bf 172.16.73.146:6379
+   slots:0-5460 (5461 slots) master
+   1 additional replica(s)
+S: d0330830840a956db909a7b63ee1f2935fab6d6b 172.16.73.166:6379@16379
+   slots: (0 slots) slave
+   replicates 4755e7640c7c54df1653911abd515001b85817bf
+M: b6f3b92d230b0dff223c62d5fac637014a148902 172.16.73.140:6379@16379
+   slots:10923-16383 (5461 slots) master
+   1 additional replica(s)
+S: 29c1f32b9ec74096a58897434d7293b9d17996bb 172.16.73.156:6379@16379
+   slots: (0 slots) slave
+   replicates b6f3b92d230b0dff223c62d5fac637014a148902
+M: 57751ba1e3235dd4b87606b119c2e89bdc7a85ce 172.16.73.150:6379@16379
+   slots:5461-10922 (5462 slots) master
+   1 additional replica(s)
+S: ae8b10a576522da96caf0b8bb5ca17dd088c42de 172.16.73.186:6379@16379
+   slots: (0 slots) slave
+   replicates 57751ba1e3235dd4b87606b119c2e89bdc7a85ce
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.

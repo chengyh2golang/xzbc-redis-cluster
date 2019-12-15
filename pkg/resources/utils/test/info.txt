@@ -1,0 +1,5 @@
+172.16.73.146:6379 (4755e764...) -> 0 keys | 5461 slots | 1 slaves.
+172.16.73.140:6379@16379 (b6f3b92d...) -> 0 keys | 5461 slots | 1 slaves.
+172.16.73.150:6379@16379 (57751ba1...) -> 0 keys | 5462 slots | 1 slaves.
+[OK] 0 keys in 3 masters.
+0.00 keys per slot on average.

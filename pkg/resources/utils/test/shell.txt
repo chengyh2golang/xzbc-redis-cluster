@@ -1,0 +1,42 @@
+#获取当前redis集群的master地址
+```
+redis-trib info  172.16.73.146:6379 | grep slave | awk '{print $1}' | cut -d ":" -f 1
+172.16.73.146
+172.16.73.140
+172.16.73.150
+```
+
+#获取当前集群master上的slot数量
+```
+redis-trib info  172.16.73.146:6379 | grep slave | awk '{print $7}'
+5461
+5461
+5462
+```
+#获取ip对应的id 短名字
+```
+redis-trib info  172.16.73.146:6379 | grep slave | grep 73.146 |
+awk '{print $2}' | cut -d "(" -f 2 | cut -d "." -f 1
+```
+输出结果：4755e764
+
+#根据短域名找完整id
+```
+redis-trib check  172.16.73.146:6379 | grep 4755e764 | grep -v replica | cut -d " " -f 2
+```
+输出结果：4755e7640c7c54df1653911abd515001b85817bf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
