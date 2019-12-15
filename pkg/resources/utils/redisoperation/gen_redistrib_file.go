@@ -194,8 +194,16 @@ func main() {
 			panic(errors.New("读取环境变量出错"))
 		}
 
+		checkSize := 0
+		//判断节点都在运行，不管是扩容还是缩容，都需要所有节点都在运行
+		if newClusterSizeInt > oldClusterSizeInt {
+			checkSize = newClusterSizeInt
+		}  else {
+			checkSize = oldClusterSizeInt
+		}
+
 		//判断所有redis cluster的节点是否都已开始监听6379端口
-		envReady := checkRedisClusterNodeReady(newClusterSizeInt, redisClusterName, ns)
+		envReady := checkRedisClusterNodeReady(checkSize, redisClusterName, ns)
 
 		//如果集群节点redis服务都已经启动正常
 		//准备使用reids-trib来初始化集群
@@ -295,13 +303,14 @@ func main() {
 
 				//从临时状态文件中获取集群状态信息
 				masterInfoMap, slaveInfoMap := fetchRedisClusterInfo(statusTempFile)
+				log.Println(masterInfoMap,"\n",slaveInfoMap)
 
 				//判断要被缩容的节点信息，例如当前是6个节点，需要被缩容成4个节点
 				//判断rediscluster01-5和rediscluster01-5是slave还是master
 				//如果是slave，就直接移除
 				//如果是master，先移除master的slave，再迁移走master上的slot，再移除master
 
-				exec_command_template := ""
+				execCommandTemplate := ""
 
 				//定义已经被移除的slave节点
 				var removedSlaveID []string
@@ -323,7 +332,8 @@ func main() {
 
 							execLine += "sleep 5; \n"
 							removedSlaveID = append(removedSlaveID,slave.slaveID)
-							exec_command_template += execLine
+							execCommandTemplate += execLine
+							fmt.Println(execCommandTemplate)
 						}
 
 						//移除完所有的slave之后，重新分配该master节点上的slot
@@ -355,7 +365,7 @@ func main() {
 								reshardToMasterID + " --slots " + strconv.Itoa(count) +
 								  " --yes "  + rediscluster01IPPort + ";\n"
 							reShardCommand += "sleep 5;\n"
-							exec_command_template += reShardCommand
+							execCommandTemplate += reShardCommand
 
 							//把本次移动的数量加给reshardedCount
 							reshardedCount += count
@@ -366,7 +376,7 @@ func main() {
 							masterStruct.masterID + ";\n"
 						execMasterLine += "sleep 5; \n"
 
-						exec_command_template += execMasterLine
+						execCommandTemplate += execMasterLine
 
 					} else {
 						//这是slave节点
@@ -378,14 +388,14 @@ func main() {
 
 							execLine += "sleep 5; \n"
 							removedSlaveID = append(removedSlaveID,slave.slaveID)
-							exec_command_template += execLine
+							execCommandTemplate += execLine
 						}
 					}
 				}
 
 				//exec_command_template将写入shell脚本
 				//用构建出来的正确执行命令去替换掉expectScriptTemplate模板中的exec_command_template
-				execScript := strings.ReplaceAll(scaleScriptTemplate, "exec_command_template", exec_command_template)
+				execScript := strings.ReplaceAll(scaleScriptTemplate, "exec_command_template", execCommandTemplate)
 
 				//写shell文件
 				bufReader := bufio.NewWriter(file)
