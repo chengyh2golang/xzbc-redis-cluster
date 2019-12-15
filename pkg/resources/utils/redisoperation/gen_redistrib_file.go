@@ -314,13 +314,17 @@ func main() {
 
 				//定义已经被移除的slave节点
 				var removedSlaveID []string
+				log.Println(oldClusterSizeInt,newClusterSizeInt)
 
 				for i:= oldClusterSizeInt-1; i< newClusterSizeInt;i-- {
 					//根据要移除的主机名去获取对应的ip
 					itemFullName := redisClusterName + "-" + strconv.Itoa(i) + "." +
 						redisClusterName + "." + ns + ".svc.cluster.local"
 
-					itemIP, _ := fetchIPByFullName(itemFullName)
+					itemIP, err := fetchIPByFullName(itemFullName)
+					if err != nil {
+						log.Printf("fetchIPByFullName faild: %v",err)
+					}
 					log.Println(itemIP)
 
 					//根据itemIP获取节点在集群中的状态信息
