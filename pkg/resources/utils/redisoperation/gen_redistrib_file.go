@@ -303,7 +303,6 @@ func main() {
 
 				//从临时状态文件中获取集群状态信息
 				masterInfoMap, slaveInfoMap := fetchRedisClusterInfo(statusTempFile)
-				log.Println(masterInfoMap,"\n",slaveInfoMap)
 
 				//判断要被缩容的节点信息，例如当前是6个节点，需要被缩容成4个节点
 				//判断rediscluster01-5和rediscluster01-5是slave还是master
@@ -314,11 +313,9 @@ func main() {
 
 				//定义已经被移除的slave节点
 				var removedSlaveID []string
-				log.Println(oldClusterSizeInt,newClusterSizeInt)
 
 				for i:= oldClusterSizeInt-1; i > newClusterSizeInt-1;i-- {
 					//根据要移除的主机名去获取对应的ip
-					log.Printf("进入循环逻辑")
 					itemFullName := redisClusterName + "-" + strconv.Itoa(i) + "." +
 						redisClusterName + "." + ns + ".svc.cluster.local"
 
@@ -326,11 +323,9 @@ func main() {
 					if err != nil {
 						log.Printf("fetchIPByFullName faild: %v",err)
 					}
-					log.Println(itemIP)
 
 					//根据itemIP获取节点在集群中的状态信息
 					if masterStruct, ok  := masterInfoMap[itemIP]; ok {
-						fmt.Println(masterStruct)
 						//这是master节点，先将master节点对应的slave节点移除
 						for _,slave := range masterStruct.slaveInfoArr {
 							//移除slave节点
