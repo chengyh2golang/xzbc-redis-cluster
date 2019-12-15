@@ -318,6 +318,7 @@ func main() {
 
 				for i:= oldClusterSizeInt-1; i< newClusterSizeInt;i-- {
 					//根据要移除的主机名去获取对应的ip
+					log.Printf("进入循环逻辑")
 					itemFullName := redisClusterName + "-" + strconv.Itoa(i) + "." +
 						redisClusterName + "." + ns + ".svc.cluster.local"
 
