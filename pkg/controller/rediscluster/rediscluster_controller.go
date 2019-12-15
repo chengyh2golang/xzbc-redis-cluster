@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
@@ -263,6 +264,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
+			time.Sleep(time.Minute *30 )
 
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
