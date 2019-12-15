@@ -252,7 +252,7 @@ func main() {
 				if len(addNodeCommand) > 0 && len(reShardInfoArray) > 0 {
 
 					for _, reShard := range reShardInfoArray {
-						//语法格式：redis-trib.rb reshard --from a8b3d0f9b12d63dab3b7337d602245d96dd55844
+						//语法格式：redis-trib reshard --from a8b3d0f9b12d63dab3b7337d602245d96dd55844
 						// --to f413fb7e6460308b17cdb71442798e1341b56cbc
 						// --slots 10923 --yes --pipeline 20 127.0.0.1:6383
 						reShardCommand := "redis-trib reshard "  + "--from all --to " +
@@ -329,7 +329,7 @@ func main() {
 						//这是master节点，先将master节点对应的slave节点移除
 						for _,slave := range masterStruct.slaveInfoArr {
 							//移除slave节点
-							execLine := "redis-trib.rb del-node " + rediscluster01IPPort + " " +
+							execLine := "redis-trib del-node " + rediscluster01IPPort + " " +
 								slave.slaveID + ";\n"
 							fmt.Println(execLine)
 							execLine += "sleep 5; \n"
@@ -374,7 +374,7 @@ func main() {
 						}
 
 						//移除完master上的slot之后，移除这个master
-						execMasterLine := "redis-trib.rb del-node " + rediscluster01IPPort + " " +
+						execMasterLine := "redis-trib del-node " + rediscluster01IPPort + " " +
 							masterStruct.masterID + ";\n"
 						execMasterLine += "sleep 5; \n"
 
@@ -385,7 +385,7 @@ func main() {
 						//判断这个slave节点是否已经被移除，如果没有，移除它
 						slave := slaveInfoMap[itemIP]
 						if !isElementExistsInArr(slave.slaveID,removedSlaveID) {
-							execLine := "redis-trib.rb del-node " + rediscluster01IPPort + " " +
+							execLine := "redis-trib del-node " + rediscluster01IPPort + " " +
 								slave.slaveID + ";\n"
 
 							execLine += "sleep 5; \n"
