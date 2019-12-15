@@ -362,7 +362,7 @@ func main() {
 							reshardToMasterIP,_ := fetchIPByFullName(reshardToMasterName)
 							reshardToMasterID := masterInfoMap[reshardToMasterIP].masterID
 
-							reShardCommand := "redis-trib reshard "  + "--from" + masterStruct.masterID +
+							reShardCommand := "redis-trib reshard "  + "--from " + masterStruct.masterID +
 								" --to " +
 								reshardToMasterID + " --slots " + strconv.Itoa(count) +
 								  " --yes "  + rediscluster01IPPort + ";\n"
