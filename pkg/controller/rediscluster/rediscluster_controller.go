@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"time"
-
+	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
-	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -28,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
@@ -265,7 +262,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err
 			}
 
-			time.Sleep(time.Minute *30 )
+			//time.Sleep(time.Minute *30 )
 
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec

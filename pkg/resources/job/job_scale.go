@@ -39,8 +39,8 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 							Command:[]string{
 								"/bin/bash",
 								"-c",
-								//"/tmp/generate-scale-script && tail -f /dev/null",
-								"/tmp/generate-script && /tmp/redis-trib-scale.sh",
+								"/tmp/generate-scale-script && tail -f /dev/null",
+								//"/tmp/generate-script && /tmp/redis-trib-scale.sh",
 							},
 							Env:[]corev1.EnvVar{
 								{Name:"REDISCLUSTER_NAME",Value:redisCluser.Name},
