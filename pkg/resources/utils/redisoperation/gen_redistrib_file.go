@@ -321,15 +321,17 @@ func main() {
 						redisClusterName + "." + ns + ".svc.cluster.local"
 
 					itemIP, _ := fetchIPByFullName(itemFullName)
+					log.Println(itemIP)
 
 					//根据itemIP获取节点在集群中的状态信息
 					if masterStruct, ok  := masterInfoMap[itemIP]; ok {
+						fmt.Println(masterStruct)
 						//这是master节点，先将master节点对应的slave节点移除
 						for _,slave := range masterStruct.slaveInfoArr {
 							//移除slave节点
 							execLine := "redis-trib.rb del-node " + rediscluster01IPPort + " " +
 								slave.slaveID + ";\n"
-
+							fmt.Println(execLine)
 							execLine += "sleep 5; \n"
 							removedSlaveID = append(removedSlaveID,slave.slaveID)
 							execCommandTemplate += execLine
