@@ -262,15 +262,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err
 			}
 
-			if newDelJob.Status.Succeeded == 1 {
-				fmt.Println(newDelJob.Status.Succeeded)
-			} else {
-				fmt.Println(newDelJob.Status)
-			}
-			fmt.Println("离开判断逻辑")
-
-
-
+			foundJob := &batchv1.Job{}
+			err = r.client.Get(context.TODO(),
+				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace},
+				foundJob)
+			fmt.Println(foundJob)
 
 			//time.Sleep(time.Minute *30 )
 
