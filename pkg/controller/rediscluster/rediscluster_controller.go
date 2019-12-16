@@ -286,12 +286,15 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//}
 
 			if isJobRuning {
+				fmt.Println("进入isJobRuning的判断逻辑")
 				return reconcile.Result{}, err
 			}
 
 			//创建一个job的label,后面需要用这个这个label去判断job是否运行成功
 			//如果job运行成功，就开始走statefulset的删除副本逻辑
 			jobName := RandString(8)
+
+			isJobRuning = true
 
 			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newDelJob)
@@ -322,7 +325,10 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				}
 
 
-			fmt.Println("将isJobRuning设置为了false")
+
+			//job执行完成后，将isJobRuning设置为false，为下次缩容做准备
+			isJobRuning = false
+
 
 			//job操作完成之后，开始做sts的逻辑，把多余的副本杀掉
 			sts := statefulset.New(instance)
@@ -349,8 +355,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if retryErr != nil {
 				fmt.Println(retryErr.Error())
 			}
-			//将isJobRuning设置为false，为下次缩容做准备
-			isJobRuning = false
+
 
 		} else {
 			//不变更集群规模，做statefulset的更新操作
