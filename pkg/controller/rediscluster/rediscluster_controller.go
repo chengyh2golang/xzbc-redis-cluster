@@ -107,6 +107,7 @@ type ReconcileRedisCluster struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling RedisCluster")
 
@@ -156,7 +157,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, err
 		}
 
-		//创建准备做redis-trib的job
+		//创建做redis-trib的job
 		redisTribJob := job.New(instance)
 		if err := controllerutil.SetControllerReference(instance, redisTribJob, r.scheme); err != nil {
 			return reconcile.Result{}, err
@@ -262,12 +263,28 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
 			//创建scale delete job
+			foundJob := &batchv1.Job{}
+			err = r.client.Get(context.TODO(),
+				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, foundJob)
+			if foundJob.Status.Active == 1 {
+				//当前有job正在执行，返回，等待下次处理
+				fmt.Println("有job正在运行，返回一次处理")
+				return reconcile.Result{}, err
+			}
+
+
+
 			jobName := RandString(8) //创建一个job的label
 			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newDelJob)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
+
+
+			//通过一个client去检查当前job的运行状态
+			//当这个job的运行状态是Succeeded的时候，才去做sts的更新操作
 
 			simpleClient, err := k8s.NewInClusterClient()
 			if err != nil {
@@ -290,6 +307,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					}
 					time.Sleep(time.Second * 5)
 				}
+
+
 
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
