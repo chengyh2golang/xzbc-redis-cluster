@@ -229,8 +229,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			found.Spec = sts.Spec
 
 			//创建scale job
-			jobLabelValue := RandString(8) //创建一个job的label
-			newScaleJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,"job_scale_up",jobLabelValue)
+			jobName := RandString(8) //创建一个job的name
+			newScaleJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newScaleJob)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -262,8 +262,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
 			//创建scale delete job
-			jobLabelValue := RandString(8) //创建一个job的label
-			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,"scale_down_job",jobLabelValue)
+			jobName := RandString(8) //创建一个job的label
+			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newDelJob)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -282,7 +282,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					}
 
 					for _,item := range pods.Items {
-						if item.Metadata.Labels["scale_down_job"] == jobLabelValue && *item.Status.Phase == "Completed" {
+						if strings.Index(*item.Metadata.Name,jobName) != -1 && *item.Status.Phase == "Completed" {
 							break EXIT
 						}
 					}
