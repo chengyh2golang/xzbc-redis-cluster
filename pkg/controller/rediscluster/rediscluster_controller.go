@@ -261,6 +261,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
+			fmt.Println("进入缩容逻辑",isJobRuning,newClusterSizeInt,newClusterSizeInt)
 			//要做缩容操作
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
@@ -288,7 +289,10 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err
 			}
 
-			jobName := RandString(8) //创建一个job的label
+			//创建一个job的label,后面需要用这个这个label去判断job是否运行成功
+			//如果job运行成功，就开始走statefulset的删除副本逻辑
+			jobName := RandString(8)
+
 			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newDelJob)
 			if err != nil {
@@ -317,12 +321,13 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					time.Sleep(time.Second * 5)
 				}
 
-			//job运行完成后，将isJobRuning设置为false，为下次缩容做准备
-			isJobRuning = false
+
+			fmt.Println("将isJobRuning设置为了false")
 
 			//job操作完成之后，开始做sts的逻辑，把多余的副本杀掉
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
+
 
 			//然后就去更新，更新要用retry操作去做
 			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -331,6 +336,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if retryErr != nil {
 				return reconcile.Result{}, err //如果retry报错，就返回给下一次处理
 			}
+
+
 
 			//如果更新成功,把最新的spec信息更新进annotation
 			instance.Annotations = map[string]string{
@@ -342,6 +349,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if retryErr != nil {
 				fmt.Println(retryErr.Error())
 			}
+			//将isJobRuning设置为false，为下次缩容做准备
+			isJobRuning = false
 
 		} else {
 			//不变更集群规模，做statefulset的更新操作
