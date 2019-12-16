@@ -108,6 +108,8 @@ type ReconcileRedisCluster struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 
+	var isJobRuning bool
+
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling RedisCluster")
 
@@ -265,23 +267,25 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//首先判断当前是否有job任务正在执行，如果有，返回k8s，等待下次执行
 
 			//首先new一个k8s client，这是个in cluster的client
-			simpleClient, err := k8s.NewInClusterClient()
-			if err != nil {
-				fmt.Println(err)
-			}
 
-			var pods simplecorev1.PodList
 
-			for i:=0 ;i<2;i ++ {
-				if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
-					fmt.Println(err)
-				}
-				for _,item := range pods.Items {
-					if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
-						return reconcile.Result{}, err
-					}
-				}
-				time.Sleep(time.Second * 2)
+
+
+			//做2次尝试检查，如果没有running job的存在，就创建job
+			//for i:=0 ;i<2;i ++ {
+			//	if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
+			//		fmt.Println(err)
+			//	}
+			//	for _,item := range pods.Items {
+			//		if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
+			//			return reconcile.Result{}, err
+			//		}
+			//	}
+			//	time.Sleep(time.Second * 2)
+			//}
+
+			if isJobRuning {
+				return reconcile.Result{}, err
 			}
 
 			jobName := RandString(8) //创建一个job的label
@@ -293,6 +297,11 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 			//通过一个client去检查当前job的运行状态
 			//当这个job的运行状态是Succeeded的时候，才去做sts的更新操作
+			simpleClient, err := k8s.NewInClusterClient()
+			if err != nil {
+				fmt.Println(err)
+			}
+
 			EXIT:
 				for {
 					var pods simplecorev1.PodList
@@ -307,6 +316,9 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					}
 					time.Sleep(time.Second * 5)
 				}
+
+			//job运行完成后，将isJobRuning设置为false，为下次缩容做准备
+			isJobRuning = false
 
 			//job操作完成之后，开始做sts的逻辑，把多余的副本杀掉
 			sts := statefulset.New(instance)
