@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 	crdv1alpha1 "xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 	"xzbc-redis-cluster/pkg/resources/configmap"
 	"xzbc-redis-cluster/pkg/resources/job"
@@ -226,7 +229,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			found.Spec = sts.Spec
 
 			//创建scale job
-			newScaleJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize)
+			jobLabelValue := RandString(8) //创建一个job的label
+			newScaleJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,"job_scale_up",jobLabelValue)
 			err = r.client.Create(context.TODO(), newScaleJob)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -258,7 +262,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
 			//创建scale delete job
-			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize)
+			jobLabelValue := RandString(8) //创建一个job的label
+			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,"scale_down_job",jobLabelValue)
 			err = r.client.Create(context.TODO(), newDelJob)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -269,22 +274,20 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				fmt.Println(err)
 			}
 
+			EXIT:
+				for {
+					var pods simplecorev1.PodList
+					if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
+						fmt.Println(err)
+					}
 
-
-
-			var pods simplecorev1.PodList
-			jobLabel := new(k8s.LabelSelector)
-			jobLabel.In("job-name")
-			if err := simpleClient.List(context.Background(), instance.Namespace, &pods,jobLabel.Selector()); err != nil {
-				fmt.Println(err)
-			}
-
-			fmt.Println(pods)
-
-
-
-
-			//time.Sleep(time.Minute *30 )
+					for _,item := range pods.Items {
+						if item.Metadata.Labels["scale_down_job"] == jobLabelValue && *item.Status.Phase == "Completed" {
+							break EXIT
+						}
+					}
+					time.Sleep(time.Second * 5)
+				}
 
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
@@ -337,6 +340,17 @@ func toSpec(data string) crdv1alpha1.RedisClusterSpec {
 	redisClusterSpec := crdv1alpha1.RedisClusterSpec{}
 	_ = json.Unmarshal([]byte(data), &redisClusterSpec)
 	return redisClusterSpec
+}
+
+//k8s的命名规范要求全小写的域名
+func RandString(len int) string {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	bytes := make([]byte, len)
+	for i := 0; i < len; i++ {
+		b := r.Intn(26) + 65
+		bytes[i] = byte(b)
+	}
+	return strings.ToLower(string(bytes))
 }
 
 /*

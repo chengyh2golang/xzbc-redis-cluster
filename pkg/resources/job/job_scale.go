@@ -8,7 +8,7 @@ import (
 	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
-func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSize string)  *batchv1.Job {
+func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSize,labelKey,labelValue string)  *batchv1.Job {
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
@@ -17,7 +17,10 @@ func NewScaleJob(redisCluser *v1alpha1.RedisCluster,oldClusterSize,newClusterSiz
 		ObjectMeta: metav1.ObjectMeta{
 			Name: redisCluser.Name + "-job-" + RandString(8),
 			Namespace: redisCluser.Namespace,
-			Labels:    map[string]string{"crd.xzbc.com.cn": redisCluser.Name},
+			Labels:    map[string]string{
+				"crd.xzbc.com.cn": redisCluser.Name,
+				labelKey:labelValue,
+			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(redisCluser, schema.GroupVersionKind{
 					Group:   v1alpha1.SchemeGroupVersion.Group,
