@@ -284,7 +284,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					for _,item := range pods.Items {
 						fmt.Println(*item.Metadata.Name)
 						fmt.Println(*item.Status.Phase)
-						if strings.Index(*item.Metadata.Name,jobName) != -1 && *item.Status.Phase == "Completed" {
+						if strings.Index(*item.Metadata.Name,jobName) != -1 && *item.Status.Phase == "Succeeded" {
 							break EXIT
 						}
 					}
