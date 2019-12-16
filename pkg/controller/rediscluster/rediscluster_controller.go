@@ -34,6 +34,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
+var isJobRuning bool
 //var redisClusterInfo = sync.Map{}
 
 /**
@@ -108,7 +109,7 @@ type ReconcileRedisCluster struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 
-	var isJobRuning bool
+
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling RedisCluster")
@@ -265,8 +266,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//要做缩容操作
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
-
-			//做2次尝试检查，如果没有running job的存在，就创建job
 			//for i:=0 ;i<2;i ++ {
 			//	if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
 			//		fmt.Println(err)
@@ -287,13 +286,15 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//如果job运行成功，就开始走statefulset的删除副本逻辑
 			jobName := RandString(8)
 
-			isJobRuning = true
+
 
 			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
 			err = r.client.Create(context.TODO(), newDelJob)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
+			isJobRuning = true
 
 			//通过一个client去检查当前job的运行状态
 			//当这个job的运行状态是Succeeded的时候，才去做sts的更新操作
@@ -343,8 +344,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			check := &appsv1.StatefulSet{}
 			err = r.client.Get(context.TODO(),
 				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, check)
-			fmt.Println(fmt.Sprintf("%v",*check.Spec.Replicas),
-				fmt.Sprintf("%v",newClusterSizeInt))
 
 			if fmt.Sprintf("%v",*check.Spec.Replicas) == fmt.Sprintf("%v",newClusterSizeInt) {
 				isJobRuning = false
