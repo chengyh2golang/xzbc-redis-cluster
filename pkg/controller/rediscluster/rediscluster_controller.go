@@ -14,6 +14,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -261,6 +262,16 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+
+			if newDelJob.Status.Succeeded == 1 {
+				fmt.Println(newDelJob.Status.Succeeded)
+			} else {
+				fmt.Println(newDelJob.Status)
+			}
+			fmt.Println("离开判断逻辑")
+
+
+
 
 			//time.Sleep(time.Minute *30 )
 
