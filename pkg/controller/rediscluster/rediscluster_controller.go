@@ -262,17 +262,24 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//要做缩容操作
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
-			//创建scale delete job
-			foundJob := &batchv1.Job{}
-			err = r.client.Get(context.TODO(),
-				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, foundJob)
-			if foundJob.Status.Active == 1 {
-				//当前有job正在执行，返回，等待下次处理
-				fmt.Println("有job正在运行，返回一次处理")
-				return reconcile.Result{}, err
+			//首先判断当前是否有job任务正在执行，如果有，返回k8s，等待下次执行
+
+			//首先new一个k8s client，这是个in cluster的client
+			simpleClient, err := k8s.NewInClusterClient()
+			if err != nil {
+				fmt.Println(err)
 			}
 
+			var pods simplecorev1.PodList
+			if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
+				fmt.Println(err)
+			}
 
+			for _,item := range pods.Items {
+				if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
+					return reconcile.Result{}, err
+				}
+			}
 
 			jobName := RandString(8) //创建一个job的label
 			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
@@ -281,16 +288,8 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err
 			}
 
-
-
 			//通过一个client去检查当前job的运行状态
 			//当这个job的运行状态是Succeeded的时候，才去做sts的更新操作
-
-			simpleClient, err := k8s.NewInClusterClient()
-			if err != nil {
-				fmt.Println(err)
-			}
-
 			EXIT:
 				for {
 					var pods simplecorev1.PodList
@@ -299,8 +298,6 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					}
 
 					for _,item := range pods.Items {
-						fmt.Println(*item.Metadata.Name)
-						fmt.Println(*item.Status.Phase)
 						if strings.Index(*item.Metadata.Name,jobName) != -1 && *item.Status.Phase == "Succeeded" {
 							break EXIT
 						}
@@ -308,12 +305,10 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 					time.Sleep(time.Second * 5)
 				}
 
-
-
+			//job操作完成之后，开始做sts的逻辑，把多余的副本杀掉
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
-			//更新sts
 			//然后就去更新，更新要用retry操作去做
 			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return r.client.Update(context.TODO(), found)
