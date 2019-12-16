@@ -15,10 +15,10 @@ import (
 	"xzbc-redis-cluster/pkg/resources/service"
 	"xzbc-redis-cluster/pkg/resources/statefulset"
 
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	"github.com/ericchiang/k8s"
 	simplecorev1 "github.com/ericchiang/k8s/apis/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
