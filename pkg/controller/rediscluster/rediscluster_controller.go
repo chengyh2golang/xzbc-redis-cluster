@@ -271,14 +271,17 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 			var pods simplecorev1.PodList
-			if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
-				fmt.Println(err)
-			}
 
-			for _,item := range pods.Items {
-				if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
-					return reconcile.Result{}, err
+			for i:=0 ;i<2;i ++ {
+				if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
+					fmt.Println(err)
 				}
+				for _,item := range pods.Items {
+					if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
+						return reconcile.Result{}, err
+					}
+				}
+				time.Sleep(time.Second * 2)
 			}
 
 			jobName := RandString(8) //创建一个job的label
