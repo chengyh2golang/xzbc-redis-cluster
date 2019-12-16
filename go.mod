@@ -1,6 +1,7 @@
 module xzbc-redis-cluster
 
 require (
+	github.com/ericchiang/k8s v1.2.0
 	github.com/go-openapi/spec v0.17.2
 	github.com/operator-framework/operator-sdk v0.0.0-20191210214720-cea92d5be4cf
 	github.com/spf13/pflag v1.0.3

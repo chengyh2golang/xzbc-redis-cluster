@@ -14,6 +14,8 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	"github.com/ericchiang/k8s"
+	simplecorev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -262,11 +264,19 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				return reconcile.Result{}, err
 			}
 
-			foundJob := &batchv1.Job{}
-			err = r.client.Get(context.TODO(),
-				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace},
-				foundJob)
-			fmt.Println(foundJob)
+			simpleClient, err := k8s.NewInClusterClient()
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			var podJobs simplecorev1.PodList
+			if err := simpleClient.List(context.Background(), instance.Namespace, &podJobs); err != nil {
+				fmt.Println(err)
+			}
+
+			fmt.Println(podJobs)
+
+
 
 			//time.Sleep(time.Minute *30 )
 
