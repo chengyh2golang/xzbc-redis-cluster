@@ -34,7 +34,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_rediscluster")
-var isJobRuning bool
+var isScaleDownFinished bool
 //var redisClusterInfo = sync.Map{}
 
 /**
@@ -262,46 +262,23 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			}
 
 		} else if newClusterSizeInt <  oldClusterSizeInt {
-			fmt.Println("进入缩容逻辑",isJobRuning,newClusterSizeInt,oldClusterSizeInt)
 			//要做缩容操作
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
-			//for i:=0 ;i<2;i ++ {
-			//	if err := simpleClient.List(context.Background(), instance.Namespace, &pods); err != nil {
-			//		fmt.Println(err)
-			//	}
-			//	for _,item := range pods.Items {
-			//		if strings.Index(*item.Metadata.Name,"-job") != -1 && *item.Status.Phase == "Running" {
-			//			return reconcile.Result{}, err
-			//		}
-			//	}
-			//	time.Sleep(time.Second * 2)
-			//}
+			if !isScaleDownFinished { //如果缩容没有完成，进入缩容的逻辑
 
-			if isJobRuning {
-				return reconcile.Result{}, err
-			}
+				//创建一个job的label,后面需要用这个这个label去判断job是否运行成功
+				jobName := RandString(8)
+				newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
+				err = r.client.Create(context.TODO(), newDelJob)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
 
-			//创建一个job的label,后面需要用这个这个label去判断job是否运行成功
-			//如果job运行成功，就开始走statefulset的删除副本逻辑
-			jobName := RandString(8)
-
-
-
-			newDelJob := job.NewScaleJob(instance,oldClusterSize,newClusterSize,jobName)
-			err = r.client.Create(context.TODO(), newDelJob)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			isJobRuning = true
-
-			//通过一个client去检查当前job的运行状态
-			//当这个job的运行状态是Succeeded的时候，才去做sts的更新操作
-			simpleClient, err := k8s.NewInClusterClient()
-			if err != nil {
-				fmt.Println(err)
-			}
+				simpleClient, err := k8s.NewInClusterClient()
+				if err != nil {
+					fmt.Println(err)
+				}
 
 			EXIT:
 				for {
@@ -312,17 +289,20 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 
 					for _,item := range pods.Items {
 						if strings.Index(*item.Metadata.Name,jobName) != -1 && *item.Status.Phase == "Succeeded" {
+							isScaleDownFinished = true
 							break EXIT
 						}
 					}
 					time.Sleep(time.Second * 5)
 				}
+			}
+
 
 			//job操作完成之后，开始做sts的逻辑，把多余的副本杀掉
 			sts := statefulset.New(instance)
 			found.Spec = sts.Spec
 
-			//然后就去更新，更新要用retry操作去做
+			//然后就去更新
 			retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return r.client.Update(context.TODO(), found)
 			})
@@ -341,13 +321,10 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				fmt.Println(retryErr.Error())
 			}
 
-			check := &appsv1.StatefulSet{}
-			err = r.client.Get(context.TODO(),
-				types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, check)
+			//check := &appsv1.StatefulSet{}
+			//err = r.client.Get(context.TODO(),
+			//	types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, check)
 
-			if fmt.Sprintf("%v",*check.Spec.Replicas) == fmt.Sprintf("%v",newClusterSizeInt) {
-				isJobRuning = false
-			}
 
 		} else {
 			//不变更集群规模，做statefulset的更新操作
@@ -379,7 +356,7 @@ func toSpec(data string) crdv1alpha1.RedisClusterSpec {
 	return redisClusterSpec
 }
 
-//k8s的命名规范要求全小写的域名
+//根据输入长度生成一个随机字符串，k8s的命名规范要求全小写的域名
 func RandString(len int) string {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	bytes := make([]byte, len)
