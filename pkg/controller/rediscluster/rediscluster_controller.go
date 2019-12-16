@@ -269,12 +269,18 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 				fmt.Println(err)
 			}
 
-			var podJobs simplecorev1.PodList
-			if err := simpleClient.List(context.Background(), instance.Namespace, &podJobs); err != nil {
+
+
+
+			var pods simplecorev1.PodList
+			jobLabel := new(k8s.LabelSelector)
+			jobLabel.In("job-name")
+			if err := simpleClient.List(context.Background(), instance.Namespace, &pods,jobLabel.Selector()); err != nil {
 				fmt.Println(err)
 			}
 
-			fmt.Println(podJobs)
+			fmt.Println(pods)
+
 
 
 
