@@ -59,3 +59,14 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+    - batch
+    - extensions
+  resources:
+    - jobs
+  verbs:
+    - get
+    - list
+    - watch
+    - patch
+    - create
