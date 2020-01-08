@@ -10,6 +10,7 @@ import (
 
 const (
 	RedisConfigKey          = "redis.conf"
+	FixIPKey = "fix-ip.sh"
 	//RedisConfigRelativePath = "redis.conf"
 )
 
@@ -20,6 +21,18 @@ cluster-migration-barrier 1
 dir /data
 appendonly yes
 protected-mode no
+`
+
+var fixIPConfig = `#!/bin/sh
+LATEST_IP_FILE="/data/latest-ip"
+if [ -f ${LATEST_IP_FILE} ]; then
+  if [ $POD_IP ] && [ $(cat ${LATEST_IP_FILE}) != $POD_IP ];then
+    sed -i "s/$(cat ${LATEST_IP_FILE})/${POD_IP}/g" /data/nodes.conf
+    echo $POD_IP > ${LATEST_IP_FILE}
+  fi
+else
+  echo $POD_IP > $LATEST_IP_FILE
+fi
 `
 
 func New(redisCluster *v1alpha1.RedisCluster) *corev1.ConfigMap {
@@ -42,6 +55,8 @@ func New(redisCluster *v1alpha1.RedisCluster) *corev1.ConfigMap {
 		},
 		Data: map[string]string{
 			RedisConfigKey:redisConfig,
+			FixIPKey:fixIPConfig,
 		},
 	}
 }
+

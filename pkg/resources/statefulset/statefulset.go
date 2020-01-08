@@ -1,17 +1,19 @@
 package statefulset
 
 import (
-	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"xzbc-redis-cluster/pkg/apis/crd/v1alpha1"
 )
 
 const (
 	RedisConfigKey          = "redis.conf"
 	RedisConfigRelativePath = "redis.conf"
+	FixIPKey = "fix-ip.sh"
+	FixIPRelativePath = "fix-ip.sh"
 )
 
 func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
@@ -61,6 +63,15 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								{Name: "cluster", ContainerPort: 16379,},
 							},
 							Env: []corev1.EnvVar{
+								{
+									Name:"POD_IP",
+									ValueFrom:&corev1.EnvVarSource{
+										FieldRef:&corev1.ObjectFieldSelector{
+											APIVersion:"v1",
+											FieldPath:"status.podIP",
+										},
+									},
+								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "redis-conf", MountPath: "/etc/redis"},
@@ -70,6 +81,17 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								"redis-server",
 								"/etc/redis/redis.conf",
 								"--protected-mode no",
+							},
+							Lifecycle:&corev1.Lifecycle{
+								PostStart:&corev1.Handler{
+									Exec:&corev1.ExecAction{
+										Command:[]string{
+											"/bin/sh",
+											"-c",
+											"sh /etc/redis/fix-ip.sh",
+										},
+									},
+								},
 							},
 						},
 					},
@@ -89,6 +111,7 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									Items: []corev1.KeyToPath{
 										{Key: RedisConfigKey, Path: RedisConfigRelativePath},
+										{Key: FixIPKey, Path: FixIPRelativePath},
 									},
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: redisCluster.Name,
