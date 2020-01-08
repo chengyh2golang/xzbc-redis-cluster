@@ -78,6 +78,8 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								{Name: "redis-data", MountPath: "/data"},
 							},
 							Command: []string{
+								"/bin/bash",
+								"-c",
 								"sh /etc/redis/fix-ip.sh",
 								"redis-server",
 								"/etc/redis/redis.conf",
