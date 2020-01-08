@@ -16,6 +16,8 @@ const (
 	FixIPRelativePath = "fix-ip.sh"
 )
 
+var configMapMode int32 = int32(0755)
+
 func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -78,9 +80,7 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								{Name: "redis-data", MountPath: "/data"},
 							},
 							Command: []string{
-								"/bin/bash",
-								"-c",
-								"sh /etc/redis/fix-ip.sh",
+								"/etc/redis/fix-ip.sh",
 								"redis-server",
 								"/etc/redis/redis.conf",
 								"--protected-mode no",
@@ -116,6 +116,7 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 										{Key: RedisConfigKey, Path: RedisConfigRelativePath},
 										{Key: FixIPKey, Path: FixIPRelativePath},
 									},
+									DefaultMode: &configMapMode,
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: redisCluster.Name,
 									},
