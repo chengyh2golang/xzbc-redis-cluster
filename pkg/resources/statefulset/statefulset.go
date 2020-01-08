@@ -78,21 +78,22 @@ func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 								{Name: "redis-data", MountPath: "/data"},
 							},
 							Command: []string{
+								"/etc/redis/fix-ip.sh",
 								"redis-server",
 								"/etc/redis/redis.conf",
 								"--protected-mode no",
 							},
-							Lifecycle:&corev1.Lifecycle{
-								PostStart:&corev1.Handler{
-									Exec:&corev1.ExecAction{
-										Command:[]string{
-											"/bin/sh",
-											"-c",
-											"sh /etc/redis/fix-ip.sh",
-										},
-									},
-								},
-							},
+							//Lifecycle:&corev1.Lifecycle{
+							//	PostStart:&corev1.Handler{
+							//		Exec:&corev1.ExecAction{
+							//			Command:[]string{
+							//				"/bin/sh",
+							//				"-c",
+							//				"sh /etc/redis/fix-ip.sh",
+							//			},
+							//		},
+							//	},
+							//},
 						},
 					},
 					Volumes: []corev1.Volume{

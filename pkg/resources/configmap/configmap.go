@@ -23,17 +23,20 @@ appendonly yes
 protected-mode no
 `
 
+
 var fixIPConfig = `#!/bin/sh
-LATEST_IP_FILE="/data/latest-ip"
-if [ -f ${LATEST_IP_FILE} ]; then
-  if [ $POD_IP ] && [ $(cat ${LATEST_IP_FILE}) != $POD_IP ];then
-    sed -i "s/$(cat ${LATEST_IP_FILE})/${POD_IP}/g" /data/nodes.conf
-    echo $POD_IP > ${LATEST_IP_FILE}
-  fi
-else
-  echo $POD_IP > $LATEST_IP_FILE
-fi
+    CLUSTER_CONFIG="/data/nodes.conf"
+    if [ -f ${CLUSTER_CONFIG} ]; then
+      if [ -z "${POD_IP}" ]; then
+        echo "Unable to determine Pod IP address!"
+        exit 1
+      fi
+      echo "Updating my IP to ${POD_IP} in ${CLUSTER_CONFIG}"
+      sed -i.bak -e '/myself/ s/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/'${POD_IP}'/' ${CLUSTER_CONFIG}
+    fi
+    exec "$@"
 `
+
 
 func New(redisCluster *v1alpha1.RedisCluster) *corev1.ConfigMap {
 	return &corev1.ConfigMap{

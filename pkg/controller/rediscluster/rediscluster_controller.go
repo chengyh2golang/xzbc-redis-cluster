@@ -265,7 +265,7 @@ func (r *ReconcileRedisCluster) Reconcile(request reconcile.Request) (reconcile.
 			//要做缩容操作
 			//先调用job，把需要删除的pod副本上的slot全部转移到其他节点上之后再执行sts的更新操作
 
-			if !isScaleDownFinished { //如果缩容没有完成，进入缩容的逻辑
+			if !isScaleDownFinished { //如果缩容没有完成，不进入缩容的逻辑
 
 				//创建一个job的label,后面需要用这个这个label去判断job是否运行成功
 				jobName := RandString(8)
@@ -366,40 +366,3 @@ func RandString(len int) string {
 	}
 	return strings.ToLower(string(bytes))
 }
-
-/*
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(redisCluster *crdv1alpha1.RedisCluster) *corev1.Pod {
-	labels := map[string]string{
-		"app": redisCluster.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      redisCluster.Name + "-redis-trib-pod",
-			Namespace: redisCluster.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "redis-trib",
-					Image: redisCluster.Spec.RedisTribImage,
-					ImagePullPolicy:corev1.PullIfNotPresent,
-					Command:[]string{
-						"/bin/bash",
-						"-c",
-						"/tmp/generate-script && /tmp/redis-trib.sh && tail -f /dev/null",
-					},
-					Env:[]corev1.EnvVar{
-						//通过Sprintf把int32转换成了string
-						{Name:"CLUSTER_SIZE",Value:fmt.Sprintf("%v",*redisCluster.Spec.Replicas)},
-						{Name:"REDISCLUSTER_NAME",Value:redisCluster.Name},
-						{Name:"NAMESPACE",Value:redisCluster.Namespace},
-
-					},
-				},
-			},
-		},
-	}
- }
-*/
