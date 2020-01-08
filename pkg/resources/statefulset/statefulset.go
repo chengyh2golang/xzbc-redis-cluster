@@ -16,7 +16,7 @@ const (
 	FixIPRelativePath = "fix-ip.sh"
 )
 
-var configMapMode int32 = int32(0755)
+var configMapMode = int32(0755)
 
 func New(redisCluster *v1alpha1.RedisCluster) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
